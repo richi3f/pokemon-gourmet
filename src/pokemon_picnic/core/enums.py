@@ -28,7 +28,6 @@ class Power(_ReprEnum):
 
 
 class Type(_ReprEnum):
-    NONE = 0
     NORMAL = auto()
     FIGHTING = auto()
     FLYING = auto()
