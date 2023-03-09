@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 class Flavor(Enum):
     SWEET = auto()
-    SPICY = auto()
+    SALTY = auto()
     SOUR = auto()
     BITTER = auto()
     HOT = auto()
