@@ -667,4 +667,4 @@ def get_ingredient(name: str):
     for ingredient in CONDIMENTS + FILLINGS:
         if ingredient.name == name:
             return ingredient
-    raise KeyError("Ingredient data not found")
+    raise KeyError(f"Ingredient data not found: {name}")
