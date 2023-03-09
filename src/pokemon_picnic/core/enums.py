@@ -1,7 +1,12 @@
 from enum import Enum, auto
 
 
-class Flavor(Enum):
+class _ReprEnum(Enum):
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}.{self.name}"
+
+
+class Flavor(_ReprEnum):
     SWEET = auto()
     SALTY = auto()
     SOUR = auto()
@@ -9,20 +14,21 @@ class Flavor(Enum):
     HOT = auto()
 
 
-class Power(Enum):
-    EGG = "Egg Power"
-    CATCHING = "Catching Power"
-    ITEM = "Item Drop Power"
-    HUMUNGO = "Humungo Power"
-    TEENSY = "Teensy Power"
-    RAID = "Raid Power"
-    ENCOUNTER = "Encounter Power"
-    EXP_POINT = "Exp. Point Power"
-    TITLE = "Title Power"
-    SPARKLING = "Sparkling Power"
+class Power(_ReprEnum):
+    EGG = auto()
+    CATCHING = auto()
+    EXP_POINT = auto()
+    ITEM_DROP = auto()
+    RAID = auto()
+    SPARKLING = auto()
+    TITLE = auto()
+    HUMUNGO = auto()
+    TEENSY = auto()
+    ENCOUNTER = auto()
 
 
-class Type(Enum):
+class Type(_ReprEnum):
+    NONE = 0
     NORMAL = auto()
     FIGHTING = auto()
     FLYING = auto()
