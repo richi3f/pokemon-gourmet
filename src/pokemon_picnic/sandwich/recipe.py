@@ -1,4 +1,4 @@
-__all__ = ["Recipe"]
+__all__ = ["Effect", "Recipe"]
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -82,7 +82,7 @@ def sort_types(dominant_types: list[tuple[Type, int]]) -> tuple[Type, Type, Type
             split = difference >= 78 and values[1] <= 16
         elif 80 <= values[0] < 90:
             split = difference >= 74 and values[1] <= 9
-        elif 74 <= values[0] > 80:
+        elif 74 <= values[0] < 80:
             split = difference >= 72 and values[1] <= 5
         if split:
             return (types[0], types[2], types[0])
@@ -123,7 +123,7 @@ class Recipe:
 
     @property
     def is_legal(self) -> bool:
-        return len(self.fillings) <= 6 and len(self.condiments) <= 4
+        return 0 < len(self.fillings) <= 6 and 0 < len(self.condiments) <= 4
 
     @classmethod
     def from_str(cls, *ingredient_names: str) -> "Recipe":
@@ -131,7 +131,10 @@ class Recipe:
         for name in ingredient_names:
             ingredient = get_ingredient(name)
             ingredients[isinstance(ingredient, Filling)].append(ingredient)
-        return cls(*ingredients)
+        recipe = cls(*ingredients)
+        if recipe.is_legal:
+            return recipe
+        raise ValueError("Recipe is not legal.")
 
     def _get_attr_sum(self, attr_name: str) -> dict[Any, int]:
         if attr_name == "type":
