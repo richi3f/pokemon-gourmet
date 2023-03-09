@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from pokemon_picnic.core.enums import Flavor, Power, Type
 from pokemon_picnic.sandwich.ingredient import Condiment, Filling, Ingredient
-from pokemon_picnic.sandwich.ingredient_data import get_ingredient
+from pokemon_picnic.sandwich.ingredient_data import INGREDIENTS
 
 FLAVOR_COMBO_BONUS: dict[tuple[Flavor, Flavor], Power] = {
     (Flavor.SWEET, Flavor.SALTY): Power.EGG,
@@ -95,6 +95,9 @@ class Effect:
     pokemon_type: Type
     level: int
 
+    def __hash__(self) -> int:
+        return hash((self.power.value, self.pokemon_type.value, self.level))
+
     def __repr__(self) -> str:
         return f"{self.power.name} Power: {self.pokemon_type.name} Lv. {self.level}"
 
@@ -129,7 +132,7 @@ class Recipe:
     def from_str(cls, *ingredient_names: str) -> "Recipe":
         ingredients = ([], [])
         for name in ingredient_names:
-            ingredient = get_ingredient(name)
+            ingredient = INGREDIENTS[name]
             ingredients[isinstance(ingredient, Filling)].append(ingredient)
         recipe = cls(*ingredients)
         if recipe.is_legal:

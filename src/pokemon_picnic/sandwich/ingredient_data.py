@@ -1,4 +1,4 @@
-__all__ = ["CONDIMENTS", "FILLINGS", "get_ingredient"]
+__all__ = ["CONDIMENTS", "FILLINGS", "INGREDIENTS"]
 
 from pokemon_picnic.core.enums import Flavor, Power, Type
 from pokemon_picnic.sandwich.ingredient import Condiment, Filling
@@ -662,9 +662,4 @@ FILLINGS = [
     ),
 ]
 
-
-def get_ingredient(name: str):
-    for ingredient in CONDIMENTS + FILLINGS:
-        if ingredient.name == name:
-            return ingredient
-    raise KeyError(f"Ingredient data not found: {name}")
+INGREDIENTS = {ingredient.name: ingredient for ingredient in CONDIMENTS + FILLINGS}
