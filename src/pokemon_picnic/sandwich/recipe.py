@@ -89,17 +89,17 @@ def sort_types(dominant_types: list[tuple[Type, int]]) -> tuple[Type, Type, Type
         return (types[0], types[2], types[1])
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Effect:
     power: Power
     pokemon_type: Type
     level: int
 
-    def __hash__(self) -> int:
-        return hash((self.power.value, self.pokemon_type.value, self.level))
-
     def __repr__(self) -> str:
-        return f"{self.power.name} Power: {self.pokemon_type.name} Lv. {self.level}"
+        type_ = ""
+        if self.power != Power.EGG:
+            type_ = self.pokemon_type.name
+        return f"{self.power.name} Power: {type_} Lv. {self.level}"
 
 
 class Recipe:
@@ -127,6 +127,10 @@ class Recipe:
     @property
     def is_legal(self) -> bool:
         return 0 < len(self.fillings) <= 6 and 0 < len(self.condiments) <= 4
+
+    @property
+    def has_herba_mystica(self) -> bool:
+        return any(condiment.is_herba_mystica for condiment in self.condiments)
 
     @classmethod
     def from_str(cls, *ingredient_names: str) -> "Recipe":
@@ -188,5 +192,11 @@ class Recipe:
 
         return attrs
 
+    def __str__(self) -> str:
+        if len(self.ingredients) > 0:
+            return "Recipe Effects:\n" + "\n".join(map(str, self.effects))
+        return "Empty Recipe"
+
     def __repr__(self) -> str:
-        return "Recipe Effects:\n" + "\n".join(map(str, self.effects))
+        s = "s" if len(self.ingredients) != 1 else ""
+        return f"Recipe({len(self.ingredients)} ingredient{s})"
