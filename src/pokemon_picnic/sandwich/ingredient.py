@@ -18,6 +18,12 @@ class _IngredientBase:
     def is_filling(self) -> bool:
         raise NotImplementedError
 
+    def __lt__(self, other: "_IngredientBase") -> bool:
+        return self.name < other.name
+
+    def __eq__(self, other: "_IngredientBase") -> bool:
+        return self.__class__ == other.__class__ and self.name == other.name
+
 
 @dataclass
 class _IngredientProperties:
@@ -37,16 +43,22 @@ class _FillingBase(_IngredientBase):
 
 @dataclass
 class Condiment(_IngredientProperties, _IngredientBase):
-    pass
-
     @property
     def is_filling(self) -> bool:
         return False
 
+    @property
+    def is_herba_mystica(self) -> bool:
+        return "Herba Mystica" in self.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 
 @dataclass
 class Filling(_IngredientProperties, _FillingBase):
-    pass
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
 Ingredient = Union[Condiment, Filling]
