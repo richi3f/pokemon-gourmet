@@ -129,9 +129,9 @@ def test_non_herba_mystica_recipes():
     assert effects[2] == Effect(Power.RAID, Type.GRASS, 1)
 
     recipe = Recipe.from_str(
-        "Sliced Egg",
-        "Sliced Egg",
-        "Sliced Egg",
+        "Egg",
+        "Egg",
+        "Egg",
         "Jalapeno",
         "Jalapeno",
         "Potato Salad",
@@ -270,7 +270,7 @@ def test_non_herba_mystica_recipes():
     assert effects[2] == Effect(Power.ENCOUNTER, Type.FLYING, 1)
 
     recipe = Recipe.from_str(
-        "Sliced Egg",
+        "Egg",
         "Noodles",
         "Noodles",
         "Noodles",
