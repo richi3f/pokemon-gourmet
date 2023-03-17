@@ -8,12 +8,17 @@ from pokemon_picnic.suggester.mcts.state import Sandwich, State
 
 RolloutPolicy = Callable[..., Action]
 
+ROLLOUT_POLICIES: dict[str, RolloutPolicy] = {}
+
 
 def random_rollout_policy(state: State) -> Action:
     """A rollout policy that gives ingredients a uniform probability of being
     picked."""
     possible_actions = state.get_possible_actions()
     return random.choice(possible_actions)
+
+
+ROLLOUT_POLICIES["random"] = random_rollout_policy
 
 
 def short_recipe_rollout_policy(state: State, prob: float = 0.5) -> Action:
@@ -38,6 +43,8 @@ def short_recipe_rollout_policy(state: State, prob: float = 0.5) -> Action:
     weights[finish_idx] = prob / (1 - prob) * (len(possible_actions) - 1)
     return random.choices(possible_actions, weights, k=1)[0]
 
+
+ROLLOUT_POLICIES["short_recipe"] = short_recipe_rollout_policy
 
 # TODO: policy take into account ingredient properties
 # TODO: policy take into account ingredient price/number

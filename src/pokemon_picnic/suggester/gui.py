@@ -21,10 +21,6 @@ from pokemon_picnic.suggester.suggest import suggest
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
-ROLLOUT_POLICIES: dict[str, p.RolloutPolicy] = {
-    "Random": p.random_rollout_policy,
-    "Short recipe": p.short_recipe_rollout_policy,
-}
 TYPE_COLORS = {
     Type.NORMAL: (159, 161, 159),
     Type.FIGHTING: (255, 128, 0),
@@ -78,7 +74,7 @@ def update_target_selectboxes() -> None:
 
 def change_rollout_policy_desc() -> None:
     """Change the caption describing what each rollout policy does."""
-    doc = ROLLOUT_POLICIES[st.session_state.rollout_policy].__doc__
+    doc = p.ROLLOUT_POLICIES[st.session_state.rollout_policy].__doc__
     if doc is not None:
         doc_section, *_ = Docstring(doc, parser=Parser.google).parsed
         st.session_state.rollout_policy_desc = getattr(doc_section, "value")
@@ -89,9 +85,9 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
     current state). If the given function name takes more than one argument,
     create input boxes so users can change the values of the other arguments
     and return a partial function."""
-    if func_name not in ROLLOUT_POLICIES:
+    if func_name not in p.ROLLOUT_POLICIES:
         raise ValueError("Unexpected rollout policy function name.")
-    func = ROLLOUT_POLICIES[func_name]
+    func = p.ROLLOUT_POLICIES[func_name]
     params = inspect.signature(func).parameters
     if len(params) > 1:
         # a rollout policy that takes additional parameters
@@ -251,7 +247,7 @@ def main() -> None:
         )
         rollout_policy_name = st.selectbox(
             "Rollout policy",
-            ROLLOUT_POLICIES.keys(),
+            [name[0] + name[1:].replace("_", "") for name in p.ROLLOUT_POLICIES.keys()],
             help="Policy used to randomly pick an ingredient to add to the sandwich.",
             key="rollout_policy",
             on_change=change_rollout_policy_desc,
