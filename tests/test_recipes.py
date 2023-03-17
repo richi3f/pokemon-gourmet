@@ -132,8 +132,8 @@ def test_non_herba_mystica_recipes():
         "Egg",
         "Egg",
         "Egg",
-        "Jalapeno",
-        "Jalapeno",
+        "Jalapeño",
+        "Jalapeño",
         "Potato Salad",
         "Whipped Cream",
     )
