@@ -1,10 +1,15 @@
-import re
+import inspect
+from functools import partial
 from math import sqrt
+from numbers import Number
 from pathlib import Path
 from typing import Optional, cast
 
 import pandas as pd
 import streamlit as st
+from griffe.dataclasses import Docstring
+from griffe.docstrings.dataclasses import DocstringSectionParameters
+from griffe.docstrings.parsers import Parser
 
 from pokemon_picnic.core.enums import Power, Type
 from pokemon_picnic.sandwich.ingredient import Condiment, Filling, Ingredient
@@ -16,11 +21,10 @@ from pokemon_picnic.suggester.suggest import suggest
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
-ROLLOUT_POLICIES = {
+ROLLOUT_POLICIES: dict[str, p.RolloutPolicy] = {
     "Random": p.random_rollout_policy,
     "Short recipe": p.short_recipe_rollout_policy,
 }
-WHITESPACE_PATTERN = re.compile(r"\s+")
 TYPE_COLORS = {
     Type.NORMAL: (159, 161, 159),
     Type.FIGHTING: (255, 128, 0),
@@ -75,8 +79,47 @@ def update_target_selectboxes() -> None:
 def change_rollout_policy_desc() -> None:
     """Change the caption describing what each rollout policy does."""
     doc = ROLLOUT_POLICIES[st.session_state.rollout_policy].__doc__
-    desc = WHITESPACE_PATTERN.sub(" ", str(doc))
-    st.session_state.rollout_policy_desc = desc
+    if doc is not None:
+        doc_section, *_ = Docstring(doc, parser=Parser.google).parsed
+        st.session_state.rollout_policy_desc = getattr(doc_section, "value")
+
+
+def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
+    """Return a rollout policy function that takes one single argument (the
+    current state). If the given function name takes more than one argument,
+    create input boxes so users can change the values of the other arguments
+    and return a partial function."""
+    if func_name not in ROLLOUT_POLICIES:
+        raise ValueError("Unexpected rollout policy function name.")
+    func = ROLLOUT_POLICIES[func_name]
+    params = inspect.signature(func).parameters
+    if len(params) > 1:
+        # a rollout policy that takes additional parameters
+        func_doc = func.__doc__
+        if func_doc is not None:
+            func_doc = Docstring(func_doc, parser=Parser.google)
+            param_docs = []
+            for section in func_doc.parsed:
+                if isinstance(section, DocstringSectionParameters):
+                    param_docs = section.value
+        else:
+            param_docs = None
+        rollout_policy_kwargs = {}
+        for i, param in enumerate(params.values()):
+            if param.name == "state":
+                continue
+            if issubclass(param.annotation, Number):
+                if param_docs:
+                    label, desc = param_docs[i].description.split(". ", 1)
+                else:
+                    label, desc = param.name, None
+                rollout_policy_kwargs[param.name] = st.number_input(
+                    label, value=param.default, help=desc
+                )
+            else:
+                raise ValueError("Unsupported parameter type.")
+        func = partial(func, **rollout_policy_kwargs)
+    return func
 
 
 def parse_targets() -> list[Target]:
@@ -204,7 +247,8 @@ def main() -> None:
         )
         exploration_constant = st.number_input(
             "Exploration constant",
-            value=1 / sqrt(2),
+            value=1.0,
+            step=0.1,
             help="Bias of the algorithm towards diverse set of recipes.",
         )
         max_walltime = st.number_input(
@@ -213,7 +257,7 @@ def main() -> None:
             step=100,
             help="Maximum time (in milliseconds) each sandwich simulation runs.",
         )
-        rollout_policy = st.selectbox(
+        rollout_policy_name = st.selectbox(
             "Rollout policy",
             ROLLOUT_POLICIES.keys(),
             help="Policy used to randomly pick an ingredient to add to the sandwich.",
@@ -223,6 +267,7 @@ def main() -> None:
         st.caption("Rollout policy explanation")
         st.write(st.session_state.rollout_policy_desc)
         change_rollout_policy_desc()
+        rollout_policy_func = get_rollout_policy_func(rollout_policy_name)
 
     if st.button("Suggest recipes"):
         try:
@@ -238,10 +283,9 @@ def main() -> None:
             pbar_text = "Operation in progress. Please wait."
             pbar = st.progress(0.0, pbar_text)
 
-            assert rollout_policy
             mcts_kwargs = dict(
-                rollout_policy=ROLLOUT_POLICIES[rollout_policy],
-                exploration_constant=exploration_constant,
+                rollout_policy=rollout_policy_func,
+                exploration_constant=exploration_constant / sqrt(2),
                 max_walltime=max_walltime,
             )
 
