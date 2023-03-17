@@ -144,14 +144,6 @@ def parse_targets() -> list[Target]:
             type_ = Type[type_str]
         target_powers.append(power)
         targets.append(Target(power, type_))
-    if len(set(target_powers)) != 3:
-        raise e.RepeatedPowers(
-            "Repeated powers. A sandwich cannot have two or more of the same effect."
-        )
-    if Power.SPARKLING in target_powers and not Power.TITLE in target_powers:
-        raise e.InvalidEffects(
-            "Invalid effects. Sparkling Power is always paired with Title Power."
-        )
     return targets
 
 
@@ -272,12 +264,7 @@ def main() -> None:
     if st.button("Suggest recipes"):
         try:
             targets = parse_targets()
-        except (
-            e.InvalidEffects,
-            e.RepeatedPowers,
-            e.UnexpectedPower,
-            e.UnexpectedType,
-        ) as exception:
+        except (e.UnexpectedPower, e.UnexpectedType) as exception:
             st.error(str(exception))
         else:
             pbar_text = "Operation in progress. Please wait."
