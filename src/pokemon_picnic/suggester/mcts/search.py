@@ -115,7 +115,7 @@ class MonteCarloTreeSearch:
         for child in node.children.values():
             uct = child._total_reward / child._num_visits
             uct += exploration_constant * sqrt(
-                2 * log(node._num_visits / child._num_visits)
+                2 * log(node._num_visits) / child._num_visits
             )
             if uct > max_uct:
                 max_uct = uct
