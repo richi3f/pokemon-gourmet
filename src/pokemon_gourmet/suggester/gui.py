@@ -74,9 +74,14 @@ def update_target_selectboxes() -> None:
                 st.session_state[f"type{i}"] = type_names[sparkling_idx]
 
 
+def slugify_rollout_policy_name(func_name: Optional[str]) -> str:
+    return str(func_name).lower().replace(" ", "_")
+
+
 def change_rollout_policy_desc() -> None:
     """Change the caption describing what each rollout policy does."""
-    doc = p.ROLLOUT_POLICIES[st.session_state.rollout_policy].__doc__
+    key = slugify_rollout_policy_name(st.session_state.rollout_policy)
+    doc = p.ROLLOUT_POLICIES[key].__doc__
     if doc is not None:
         doc_section, *_ = Docstring(doc, parser=Parser.google).parsed
         st.session_state.rollout_policy_desc = getattr(doc_section, "value")
@@ -87,6 +92,7 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
     current state). If the given function name takes more than one argument,
     create input boxes so users can change the values of the other arguments
     and return a partial function."""
+    func_name = slugify_rollout_policy_name(func_name)
     if func_name not in p.ROLLOUT_POLICIES:
         raise ValueError("Unexpected rollout policy function name.")
     func = p.ROLLOUT_POLICIES[func_name]
@@ -248,7 +254,7 @@ def main() -> None:
         )
         rollout_policy_name = st.selectbox(
             "Rollout policy",
-            [name[0] + name[1:].replace("_", "") for name in p.ROLLOUT_POLICIES.keys()],
+            [name[0].upper() + name[1:].replace("_", " ") for name in p.ROLLOUT_POLICIES.keys()],
             help="Policy used to randomly pick an ingredient to add to the sandwich.",
             key="rollout_policy",
             on_change=change_rollout_policy_desc,
