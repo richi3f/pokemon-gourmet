@@ -2,7 +2,7 @@ __all__ = ["recipe_generator"]
 
 from typing import Any, Iterator, Sequence
 
-from pokemon_gourmet.core.enums import Power
+from pokemon_gourmet.enums import Power
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
 from pokemon_gourmet.suggester.mcts.state import Sandwich, State, Target

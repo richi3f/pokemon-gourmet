@@ -7,7 +7,7 @@ from math import sqrt
 
 import click
 
-from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Ingredient
 from pokemon_gourmet.suggester.generator import recipe_generator
 from pokemon_gourmet.suggester.mcts import policies as p

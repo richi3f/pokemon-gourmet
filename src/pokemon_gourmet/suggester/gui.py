@@ -13,7 +13,7 @@ from griffe.dataclasses import Docstring
 from griffe.docstrings.dataclasses import DocstringSectionParameters
 from griffe.docstrings.parsers import Parser
 
-from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.sandwich.recipe import Effect
 from pokemon_gourmet.suggester import exceptions as e

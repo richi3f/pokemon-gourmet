@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, Sequence, cast
 
-from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
 from pokemon_gourmet.sandwich.ingredient_data import (
     CONDIMENTS,

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from operator import itemgetter
 from typing import Any, cast
 
-from pokemon_gourmet.core.enums import Flavor, Power, Type
+from pokemon_gourmet.enums import Flavor, Power, Type
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
 

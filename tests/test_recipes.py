@@ -1,4 +1,4 @@
-from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich import Effect, Recipe
 
 

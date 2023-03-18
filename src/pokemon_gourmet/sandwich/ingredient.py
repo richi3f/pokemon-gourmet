@@ -3,7 +3,7 @@ __all__ = ["Condiment", "Filling"]
 from dataclasses import dataclass, field
 from typing import Union
 
-from pokemon_gourmet.core.enums import Flavor, Power, Type
+from pokemon_gourmet.enums import Flavor, Power, Type
 
 
 @dataclass
