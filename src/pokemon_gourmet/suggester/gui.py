@@ -14,12 +14,12 @@ from griffe.docstrings.dataclasses import DocstringSectionParameters
 from griffe.docstrings.parsers import Parser
 
 from pokemon_gourmet.enums import Power, Type
+from pokemon_gourmet.sandwich.effect import Effect, EffectList
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
-from pokemon_gourmet.sandwich.recipe import Effect
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.generator import recipe_generator
 from pokemon_gourmet.suggester.mcts import policies as p
-from pokemon_gourmet.suggester.mcts.state import Sandwich, Target
+from pokemon_gourmet.suggester.mcts.state import Sandwich
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
@@ -120,10 +120,10 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
     return func
 
 
-def parse_targets() -> list[Target]:
+def parse_targets() -> EffectList:
     """Return a list of targets parsed from the session state. Run tests to
     validate the targets."""
-    target_powers, targets = [], []
+    targets = []
     for i in range(3):
         power_str = st.session_state[f"power{i}"]
         if not power_str:
@@ -140,16 +140,15 @@ def parse_targets() -> list[Target]:
                 )
         else:
             type_ = Type[type_str]
-        target_powers.append(power)
-        targets.append(Target(power, type_))
-    return targets
+        targets.append((power, type_))
+    return EffectList(targets)
 
 
 def get_effect_tag(effect: Effect) -> str:
     """Return an effect represented as HTML."""
     color = (
         TYPE_COLORS[effect.pokemon_type]
-        if effect.power != Power.EGG
+        if effect.pokemon_type is not None
         else (177, 211, 177)
     )
     return (
@@ -160,9 +159,9 @@ def get_effect_tag(effect: Effect) -> str:
     )
 
 
-def style_effects(effects: tuple[Effect, ...]) -> str:
+def style_effects(effects: EffectList) -> str:
     """Return an effect list as HTML."""
-    return "<br>".join(map(get_effect_tag, effects))
+    return "<br>".join(get_effect_tag(effect) for effect in effects)
 
 
 def get_image_tag(ingredient: Optional[Ingredient] = None):

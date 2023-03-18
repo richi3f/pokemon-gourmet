@@ -1,18 +1,18 @@
-__all__ = ["Sandwich", "State", "Target"]
+__all__ = ["Sandwich", "State"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from dataclasses import astuple, dataclass
-from typing import Iterator, Union, Optional, Sequence, cast
+from typing import cast
 
-from pokemon_gourmet.enums import Power, Type
+from pokemon_gourmet.enums import Power
+from pokemon_gourmet.sandwich.effect import EffectList
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
 from pokemon_gourmet.sandwich.ingredient_data import (
     CONDIMENTS,
     FILLINGS,
     INGREDIENTS,
 )
-from pokemon_gourmet.sandwich.recipe import Effect, Recipe
+from pokemon_gourmet.sandwich.recipe import Recipe
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
@@ -41,37 +41,12 @@ class State(metaclass=ABCMeta):
         ...
 
 
-@dataclass
-class Target:
-    power: Power
-    pokemon_type: Optional[Type]
-
-    @classmethod
-    def from_effect(cls, effect: Effect) -> "Target":
-        type_ = None if effect.power == Power.EGG else effect.pokemon_type
-        return cls(effect.power, type_)
-
-    def __iter__(self) -> Iterator[Union[Power, Type, None]]:
-        return iter(astuple(self))
-
-    def __hash__(self) -> int:
-        type_ = None if self.pokemon_type is None else self.pokemon_type.value
-        return hash((self.power.value, type_))
-
-    def __repr__(self) -> str:
-        repr = f"{self.power.name} Power"
-        if self.pokemon_type is not None:
-            repr += f": {self.pokemon_type.name}"
-        return repr
-
-
 class Sandwich(Recipe, State):
-    def __init__(self, targets: Sequence[Target]) -> None:
+    def __init__(self, targets: EffectList) -> None:
         super().__init__([], [])
         if len(targets) != 3:
             raise ValueError("Target effects should be exactly three.")
-        self.targets = set(targets)
-        self.target_powers = set(target.power for target in self.targets)
+        self.targets = targets
         self._is_finished = False
 
     @property
@@ -97,9 +72,9 @@ class Sandwich(Recipe, State):
                 # Title power requires Herba Mystica
                 # Sparkling power requires two Herba Mystica
                 if ingredient.is_herba_mystica and (
-                    Power.TITLE not in self.target_powers
+                    Power.TITLE not in self.targets.powers
                     or (
-                        Power.SPARKLING not in self.target_powers
+                        Power.SPARKLING not in self.targets.powers
                         and self.has_herba_mystica
                     )
                 ):
@@ -112,11 +87,9 @@ class Sandwich(Recipe, State):
 
     def get_reward(self) -> float:
         if self.is_legal:
-            effects, levels = [], []
-            for effect in self.effects:
-                effects.append(Target.from_effect(effect))
-                levels.append(effect.level)
-            base_reward = len(self.targets.intersection(effects))
+            effects = self.effects
+            levels = effects.remove_levels()  # do not compare levels
+            base_reward = len(self.targets & effects)
             # double reward if levels are maximum
             bonus_reward = (sum(levels) + 3) / 6 if base_reward == 3 else 1.0
             return bonus_reward * base_reward / 3

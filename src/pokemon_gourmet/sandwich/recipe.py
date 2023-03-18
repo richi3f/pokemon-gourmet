@@ -1,11 +1,11 @@
-__all__ = ["Effect", "Recipe"]
+__all__ = ["Recipe"]
 
 from collections import defaultdict
-from dataclasses import dataclass
 from operator import itemgetter
 from typing import Any, cast
 
 from pokemon_gourmet.enums import Flavor, Power, Type
+from pokemon_gourmet.sandwich.effect import EffectList
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
 
@@ -89,26 +89,13 @@ def sort_types(dominant_types: list[tuple[Type, int]]) -> tuple[Type, Type, Type
         return (types[0], types[2], types[1])
 
 
-@dataclass(unsafe_hash=True)
-class Effect:
-    power: Power
-    pokemon_type: Type
-    level: int
-
-    def __repr__(self) -> str:
-        type_ = ""
-        if self.power != Power.EGG:
-            type_ = self.pokemon_type.name
-        return f"{self.power.name} Power: {type_} Lv. {self.level}"
-
-
 class Recipe:
     def __init__(self, condiments: list[Condiment], fillings: list[Filling]) -> None:
         self.condiments = condiments
         self.fillings = fillings
 
     @property
-    def effects(self) -> tuple[Effect, Effect, Effect]:
+    def effects(self) -> EffectList:
         _, power_sum, type_sum = self._get_attr_sums().values()
         dominant_types = [*type_sum.items()][:3]
         types = sort_types(dominant_types)
@@ -118,7 +105,7 @@ class Recipe:
             for power, value in power_sum.items()
             if (power != Power.SPARKLING) or (value >= 2000)
         ][:3]
-        return tuple([Effect(*effect) for effect in zip(powers, types, levels)])
+        return EffectList(zip(powers, types, levels))
 
     @property
     def ingredients(self) -> list[Ingredient]:

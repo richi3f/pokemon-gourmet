@@ -8,13 +8,13 @@ from math import sqrt
 import click
 
 from pokemon_gourmet.enums import Power, Type
+from pokemon_gourmet.sandwich.effect import EffectList
 from pokemon_gourmet.sandwich.ingredient import Ingredient
 from pokemon_gourmet.suggester.generator import recipe_generator
 from pokemon_gourmet.suggester.mcts import policies as p
-from pokemon_gourmet.suggester.mcts.state import Target
 
 
-def parse_targets(targets_str: tuple[str, ...]) -> list[Target]:
+def parse_targets(targets_str: tuple[str, ...]) -> EffectList:
     """Parse and validate a string of target effects.
 
     Args:
@@ -44,9 +44,8 @@ def parse_targets(targets_str: tuple[str, ...]) -> list[Target]:
             power_str, type_str = target_str.split(",")
             power = Power[power_str.upper()]
             pokemon_type = Type[type_str.upper()]
-        effect = Target(power, pokemon_type)
-        targets.append(effect)
-    return targets
+        targets.append((power, pokemon_type))
+    return EffectList(targets)
 
 
 def parse_rollout_policy(func_name: str, ctxt_args: list[str]) -> p.RolloutPolicy:
