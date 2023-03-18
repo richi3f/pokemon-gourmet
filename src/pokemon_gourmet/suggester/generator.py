@@ -1,4 +1,4 @@
-__all__ = ["suggest"]
+__all__ = ["recipe_generator"]
 
 from typing import Any, Iterator, Sequence
 
@@ -31,7 +31,7 @@ def validate_targets(targets: Sequence[Target]) -> None:
         )
 
 
-def suggest(
+def recipe_generator(
     targets: Sequence[Target], max_iter: int, mcts_kwargs: dict[str, Any]
 ) -> Iterator[State]:
     """Run MCTS to suggest sandwich recipes that meet the target effects.

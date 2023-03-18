@@ -9,9 +9,9 @@ import click
 
 from pokemon_gourmet.core.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Ingredient
+from pokemon_gourmet.suggester.generator import recipe_generator
 from pokemon_gourmet.suggester.mcts import policies as p
 from pokemon_gourmet.suggester.mcts.state import Target
-from pokemon_gourmet.suggester.suggest import suggest
 
 
 def parse_targets(targets_str: tuple[str, ...]) -> list[Target]:
@@ -125,7 +125,7 @@ def main(
         exploration_constant=exploration_constant / sqrt(2),
         max_walltime=max_walltime,
     )
-    sandwich = next(suggest(targets, 1, mcts_kwargs))
+    sandwich = next(recipe_generator(targets, 1, mcts_kwargs))
 
     filling_names = format_ingredients(getattr(sandwich, "fillings"))
     condiment_names = format_ingredients(getattr(sandwich, "condiments"))

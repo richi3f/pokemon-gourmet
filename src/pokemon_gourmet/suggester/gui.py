@@ -17,9 +17,9 @@ from pokemon_gourmet.core.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.sandwich.recipe import Effect
 from pokemon_gourmet.suggester import exceptions as e
+from pokemon_gourmet.suggester.generator import recipe_generator
 from pokemon_gourmet.suggester.mcts import policies as p
 from pokemon_gourmet.suggester.mcts.state import Sandwich, Target
-from pokemon_gourmet.suggester.suggest import suggest
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
@@ -277,7 +277,7 @@ def main() -> None:
             rows = []
             placeholder = st.empty()
 
-            recipe_gen = suggest(targets, num_iter, mcts_kwargs)
+            recipe_gen = recipe_generator(targets, num_iter, mcts_kwargs)
             for i, state in enumerate(recipe_gen):
                 pbar_val = (i + 1) / num_iter
                 pbar.progress(pbar_val, f"Operation in progress. ({i+1}/{num_iter})")
