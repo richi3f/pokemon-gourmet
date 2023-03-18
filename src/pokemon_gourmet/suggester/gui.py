@@ -13,13 +13,13 @@ from griffe.dataclasses import Docstring
 from griffe.docstrings.dataclasses import DocstringSectionParameters
 from griffe.docstrings.parsers import Parser
 
-from pokemon_picnic.core.enums import Power, Type
-from pokemon_picnic.sandwich.ingredient import Condiment, Filling, Ingredient
-from pokemon_picnic.sandwich.recipe import Effect
-from pokemon_picnic.suggester import exceptions as e
-from pokemon_picnic.suggester.mcts import policies as p
-from pokemon_picnic.suggester.mcts.state import Sandwich, Target
-from pokemon_picnic.suggester.suggest import suggest
+from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
+from pokemon_gourmet.sandwich.recipe import Effect
+from pokemon_gourmet.suggester import exceptions as e
+from pokemon_gourmet.suggester.mcts import policies as p
+from pokemon_gourmet.suggester.mcts.state import Sandwich, Target
+from pokemon_gourmet.suggester.suggest import suggest
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_

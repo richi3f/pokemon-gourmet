@@ -5,12 +5,12 @@ from math import log, sqrt
 from time import time
 from typing import Optional
 
-from pokemon_picnic.suggester.mcts.action import Action
-from pokemon_picnic.suggester.mcts.policies import (
+from pokemon_gourmet.suggester.mcts.action import Action
+from pokemon_gourmet.suggester.mcts.policies import (
     RolloutPolicy,
     random_rollout_policy,
 )
-from pokemon_picnic.suggester.mcts.state import State
+from pokemon_gourmet.suggester.mcts.state import State
 
 
 class Node:

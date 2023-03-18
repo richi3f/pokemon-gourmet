@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from operator import itemgetter
 from typing import Any, cast
 
-from pokemon_picnic.core.enums import Flavor, Power, Type
-from pokemon_picnic.sandwich.ingredient import Condiment, Filling, Ingredient
-from pokemon_picnic.sandwich.ingredient_data import INGREDIENTS
+from pokemon_gourmet.core.enums import Flavor, Power, Type
+from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
+from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
 
 FLAVOR_COMBO_BONUS: dict[tuple[Flavor, Flavor], Power] = {
     (Flavor.SWEET, Flavor.SALTY): Power.EGG,

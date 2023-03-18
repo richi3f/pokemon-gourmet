@@ -1,5 +1,5 @@
-from pokemon_picnic.core.enums import Power, Type
-from pokemon_picnic.sandwich import Effect, Recipe
+from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.sandwich import Effect, Recipe
 
 
 def test_herba_mystica_recipes():

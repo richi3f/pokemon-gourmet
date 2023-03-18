@@ -1,4 +1,4 @@
-recursive-include src/pokemon_picnic *.py
-recursive-include src/pokemon_picnic *.png
+recursive-include src/pokemon_gourmet *.py
+recursive-include src/pokemon_gourmet *.png
 global-exclude *.pyc
 global-exclude __pycache__

@@ -5,15 +5,15 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, Sequence, cast
 
-from pokemon_picnic.core.enums import Power, Type
-from pokemon_picnic.sandwich.ingredient import Condiment, Filling
-from pokemon_picnic.sandwich.ingredient_data import (
+from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
+from pokemon_gourmet.sandwich.ingredient_data import (
     CONDIMENTS,
     FILLINGS,
     INGREDIENTS,
 )
-from pokemon_picnic.sandwich.recipe import Effect, Recipe
-from pokemon_picnic.suggester.mcts.action import (
+from pokemon_gourmet.sandwich.recipe import Effect, Recipe
+from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
     SelectCondiment,

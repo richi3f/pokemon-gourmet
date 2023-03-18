@@ -7,11 +7,11 @@ from math import sqrt
 
 import click
 
-from pokemon_picnic.core.enums import Power, Type
-from pokemon_picnic.sandwich.ingredient import Ingredient
-from pokemon_picnic.suggester.mcts import policies as p
-from pokemon_picnic.suggester.mcts.state import Target
-from pokemon_picnic.suggester.suggest import suggest
+from pokemon_gourmet.core.enums import Power, Type
+from pokemon_gourmet.sandwich.ingredient import Ingredient
+from pokemon_gourmet.suggester.mcts import policies as p
+from pokemon_gourmet.suggester.mcts.state import Target
+from pokemon_gourmet.suggester.suggest import suggest
 
 
 def parse_targets(targets_str: tuple[str, ...]) -> list[Target]:

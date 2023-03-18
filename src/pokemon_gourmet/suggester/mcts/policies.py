@@ -3,8 +3,8 @@ __all__ = ["random_rollout_policy"]
 import random
 from typing import Callable
 
-from pokemon_picnic.suggester.mcts.action import Action, FinishSandwich
-from pokemon_picnic.suggester.mcts.state import Sandwich, State
+from pokemon_gourmet.suggester.mcts.action import Action, FinishSandwich
+from pokemon_gourmet.suggester.mcts.state import Sandwich, State
 
 RolloutPolicy = Callable[..., Action]
 

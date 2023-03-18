@@ -1,7 +1,7 @@
 __all__ = ["CONDIMENTS", "FILLINGS", "INGREDIENTS"]
 
-from pokemon_picnic.core.enums import Flavor, Power, Type
-from pokemon_picnic.sandwich.ingredient import Condiment, Filling
+from pokemon_gourmet.core.enums import Flavor, Power, Type
+from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
 
 CONDIMENTS = [
     Condiment(

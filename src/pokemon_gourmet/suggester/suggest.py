@@ -2,10 +2,10 @@ __all__ = ["suggest"]
 
 from typing import Any, Iterator, Sequence
 
-from pokemon_picnic.core.enums import Power
-from pokemon_picnic.suggester import exceptions as e
-from pokemon_picnic.suggester.mcts.search import MonteCarloTreeSearch
-from pokemon_picnic.suggester.mcts.state import Sandwich, State, Target
+from pokemon_gourmet.core.enums import Power
+from pokemon_gourmet.suggester import exceptions as e
+from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
+from pokemon_gourmet.suggester.mcts.state import Sandwich, State, Target
 
 
 def validate_targets(targets: Sequence[Target]) -> None:
