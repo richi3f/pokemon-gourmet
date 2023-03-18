@@ -1,3 +1,5 @@
+__all__ = ["Flavor", "Power", "Type"]
+
 from enum import Enum, auto
 
 

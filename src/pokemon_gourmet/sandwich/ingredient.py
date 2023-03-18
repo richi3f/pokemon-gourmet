@@ -1,4 +1,4 @@
-__all__ = ["Condiment", "Filling"]
+__all__ = ["Condiment", "Filling", "Ingredient"]
 
 from dataclasses import dataclass, field
 from typing import Union
