@@ -47,6 +47,9 @@ def validate_targets(targets: Sequence[Target]) -> None:
         raise e.InvalidEffects(
             "Invalid effects. Sparkling Power is always paired with Title Power."
         )
+    for power, type_ in targets:
+        if power == Power.EGG and type_ is not None:
+            raise e.TypedEggPower("Invalid effect. Egg Power should be typeless.")
 
 
 def recipe_generator(

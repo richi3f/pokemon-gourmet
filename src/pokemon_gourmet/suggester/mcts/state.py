@@ -2,8 +2,8 @@ __all__ = ["Sandwich", "State", "Target"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from dataclasses import dataclass
-from typing import Optional, Sequence, cast
+from dataclasses import astuple, dataclass
+from typing import Iterator, Union, Optional, Sequence, cast
 
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
@@ -50,6 +50,9 @@ class Target:
     def from_effect(cls, effect: Effect) -> "Target":
         type_ = None if effect.power == Power.EGG else effect.pokemon_type
         return cls(effect.power, type_)
+
+    def __iter__(self) -> Iterator[Union[Power, Type, None]]:
+        return iter(astuple(self))
 
     def __hash__(self) -> int:
         type_ = None if self.pokemon_type is None else self.pokemon_type.value

@@ -1,4 +1,4 @@
-__all__ = ["InvalidEffects", "RepeatedPowers", "UnexpectedPower", "UnexpectedType"]
+__all__ = ["InvalidEffects", "RepeatedPowers", "TypedEggPower", "UnexpectedPower", "UnexpectedType"]
 
 
 class InvalidEffects(ValueError):
@@ -10,6 +10,12 @@ class InvalidEffects(ValueError):
 class RepeatedPowers(ValueError):
     """Two or more Powers of the same type repeated in a list of desired
     effects."""
+
+    ...
+
+
+class TypedEggPower(ValueError):
+    """Egg Power should be typeless."""
 
     ...
 
