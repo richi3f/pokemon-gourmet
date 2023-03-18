@@ -1,11 +1,29 @@
 __all__ = ["recipe_generator"]
 
-from typing import Any, Iterator, Sequence
+from typing import Any, Iterator, Sequence, Union, cast
 
-from pokemon_gourmet.enums import Power
+from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
 from pokemon_gourmet.suggester.mcts.state import Sandwich, State, Target
+
+FlexibleTarget = Union[Target, Sequence[str], tuple[Power, Union[Type, None]]]
+
+
+def parse_targets(flex_targets: Sequence[FlexibleTarget]) -> Sequence[Target]:
+    if all(isinstance(target, Target) for target in flex_targets):
+        return cast(Sequence[Target], flex_targets)
+    targets = []
+    for effect in flex_targets:
+        if not isinstance(effect, Sequence):
+            continue
+        power, type_ = effect
+        if isinstance(power, str):
+            power = Power[power.upper()]
+        if isinstance(type_, str):
+            type_ = Type[type_.upper()]
+        targets.append(Target(power, type_))
+    return targets
 
 
 def validate_targets(targets: Sequence[Target]) -> None:
@@ -32,9 +50,9 @@ def validate_targets(targets: Sequence[Target]) -> None:
 
 
 def recipe_generator(
-    targets: Sequence[Target], max_iter: int, mcts_kwargs: dict[str, Any]
+    targets: Sequence[FlexibleTarget], max_iter: int, mcts_kwargs: dict[str, Any]
 ) -> Iterator[State]:
-    """Run MCTS to suggest sandwich recipes that meet the target effects.
+    """Run MCTS to generate sandwich recipes that meet the target effects.
 
     Args:
         targets: Desired effects in suggested sandwich recipes
@@ -46,6 +64,7 @@ def recipe_generator(
     """
     # Validate input
     i = 0
+    targets = parse_targets(targets)
     validate_targets(targets)
     mcts = MonteCarloTreeSearch(**mcts_kwargs)
     while i < max_iter:
