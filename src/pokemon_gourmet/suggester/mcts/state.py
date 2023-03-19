@@ -5,11 +5,7 @@ from copy import deepcopy
 
 from pokemon_gourmet.enums import Power
 from pokemon_gourmet.sandwich.effect import EffectList
-from pokemon_gourmet.sandwich.ingredient_data import (
-    CONDIMENTS,
-    FILLINGS,
-    INGREDIENTS,
-)
+from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
 from pokemon_gourmet.sandwich.recipe import Recipe
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
