@@ -18,6 +18,10 @@ class _IngredientBase:
     def is_filling(self) -> bool:
         raise NotImplementedError
 
+    @property
+    def is_herba_mystica(self) -> bool:
+        return False
+
     def __lt__(self, other: "_IngredientBase") -> bool:
         return self.name < other.name
 

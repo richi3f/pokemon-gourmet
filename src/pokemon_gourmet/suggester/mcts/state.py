@@ -46,6 +46,26 @@ class Sandwich(Recipe, State):
             raise ValueError("Target effects should be exactly three.")
         self.targets = targets
         self._is_finished = False
+        self._valid_condiments: list[str] = []
+        self._valid_fillings: list[str] = []
+        for ingredient in INGREDIENTS.values():
+            # Title power requires Herba Mystica
+            # Sparkling power requires two Herba Mystica
+            if ingredient.is_herba_mystica and (
+                Power.TITLE not in self.targets.powers
+                or (
+                    Power.SPARKLING not in self.targets.powers
+                    and self.has_herba_mystica
+                )
+            ):
+                continue
+            if ingredient.is_condiment:
+                self._valid_condiments.append(ingredient.name)
+            else:
+                self._valid_fillings.append(ingredient.name)
+
+    def __bool__(self) -> bool:
+        return self.get_reward() >= 1
 
     @property
     def is_finished(self) -> bool:
@@ -66,21 +86,11 @@ class Sandwich(Recipe, State):
         if self.is_legal:
             possible_actions.append(FinishSandwich())
         if len(self.condiments) < 4:
-            for ingredient in CONDIMENTS:
-                # Title power requires Herba Mystica
-                # Sparkling power requires two Herba Mystica
-                if ingredient.is_herba_mystica and (
-                    Power.TITLE not in self.targets.powers
-                    or (
-                        Power.SPARKLING not in self.targets.powers
-                        and self.has_herba_mystica
-                    )
-                ):
-                    continue
-                possible_actions.append(SelectCondiment(ingredient.name))
+            for ingredient_name in self._valid_condiments:
+                possible_actions.append(SelectCondiment(ingredient_name))
         if len(self.fillings) < 6:
-            for ingredient in FILLINGS:
-                possible_actions.append(SelectFilling(ingredient.name))
+            for ingredient_name in self._valid_fillings:
+                possible_actions.append(SelectFilling(ingredient_name))
         return possible_actions
 
     def get_reward(self) -> float:
@@ -89,8 +99,9 @@ class Sandwich(Recipe, State):
             levels = effects.remove_levels()  # do not compare levels
             base_reward = len(self.targets & effects)
             # double reward if levels are maximum
-            bonus_reward = (sum(levels) + 3) / 6 if base_reward == 3 else 1.0
-            return bonus_reward * base_reward / 3
+            bonus_reward = 100 * sum(levels) if base_reward == 3 else 3
+            filling_penalty = (11 - len(self.fillings)) / 10
+            return bonus_reward * base_reward / 9 * filling_penalty
         return 0
 
     def move(self, action: Action) -> "State":
