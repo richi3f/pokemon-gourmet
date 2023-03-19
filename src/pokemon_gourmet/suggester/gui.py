@@ -203,7 +203,7 @@ def style_ingredients(condiments: list[Condiment], fillings: list[Filling]) -> s
 
 
 def main() -> None:
-    st.set_page_config("Sandwich Recipe Suggester", ":sandwich:")
+    st.set_page_config("Pokémon Gourmet: a sandwich recipe suggester", ":sandwich:")
 
     if "disabled_type" not in st.session_state:
         st.session_state.disabled_type = [False] * 3
@@ -211,8 +211,27 @@ def main() -> None:
     if "rollout_policy_desc" not in st.session_state:
         st.session_state.rollout_policy_desc = ""
 
-    st.title(":sandwich: Recipe Suggester")
-    st.subheader("Sandwich Effects")
+    st.title(":knife_fork_plate: Pokémon Gourmet")
+    st.markdown(
+        (
+            "This tool can generate sandwich recipes for Pokémon Scarlet and "
+            "Pokémon Violet. Start by filling out the fields with the desired "
+            "sandwich effects and then click on the *Suggest recipes* button. "
+            "Wait a minute or two to obtain results."
+        )
+    )
+    st.markdown(
+        (
+            "If you are curious about how this works, feel free to read the "
+            "[documentation](https://github.com/richi3f/pokemon-gourmet"
+            "#sandwich-pokémon-gourmet). You are also welcome to contact me "
+            "on [Twitter](https://twitter.com/richi3f) or [GitHub]"
+            "[https://github.com/richi3f/pokemon-gourmet/issues/new] if you "
+            "have feedback or bugs to report."
+        )
+    )
+
+    st.subheader(":sparkles: Sandwich effects")
     cols = st.columns([1, 1, 1])
 
     for i, col in enumerate(cols):
@@ -322,6 +341,7 @@ def main() -> None:
                     .to_html()
                 )
                 with placeholder.container():
+                    st.subheader(":sandwich: Sandwich recipes")
                     st.markdown(df_html, unsafe_allow_html=True)
 
 
