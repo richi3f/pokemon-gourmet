@@ -1,6 +1,7 @@
 __all__ = [
+    "early_stopping_rollout_policy",
     "random_rollout_policy",
-    "short_recipe_rollout_policy",
+    "ROLLOUT_POLICIES",
     "weighted_allocator_rollout_policy",
 ]
 
@@ -31,7 +32,7 @@ def random_rollout_policy(state: State) -> Action:
 ROLLOUT_POLICIES["random"] = random_rollout_policy
 
 
-def short_recipe_rollout_policy(state: State, prob: float = 0.5) -> Action:
+def early_stopping_rollout_policy(state: State, prob: float = 0.5) -> Action:
     """A rollout policy that favors short recipes (i.e., the action to finish
     the sandwich has higher probability of being picked).
 
@@ -54,7 +55,7 @@ def short_recipe_rollout_policy(state: State, prob: float = 0.5) -> Action:
     return random.choices(possible_actions, weights, k=1)[0]
 
 
-ROLLOUT_POLICIES["short_recipe"] = short_recipe_rollout_policy
+ROLLOUT_POLICIES["early_stopping"] = early_stopping_rollout_policy
 
 
 def weighted_allocator_rollout_policy(

@@ -87,7 +87,7 @@ recipe .
   to the recipe. Possible policies:
 
   - `random` - randomly picks any ingredient.
-  - `short_recipe` - favors short recipes by having a high chance of stopping
+  - `early_stopping` - favors short recipes by having a high chance of stopping
     the sandwich recipe at the earliest possibility.
   - `weighted_allocator` - assigns a weight to each ingredient based on the
     free space in the sandwich. This intends to balance the number of fillings
@@ -107,7 +107,7 @@ Attempt to generate a recipe using the short recipe rollout policy with a 50%
 chance to finish the recipe early.
 
 ```bash
-gourmet title,bug encounter,bug teensy,water -r short_recipe --prob 0.5
+gourmet title,bug encounter,bug teensy,water -r early_stopping --prob 0.5
 ```
 
 Grow and explore 10 trees using the weighted allocator rollout policy.
