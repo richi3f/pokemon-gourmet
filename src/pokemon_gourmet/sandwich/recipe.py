@@ -93,19 +93,22 @@ class Recipe:
     def __init__(self, condiments: list[Condiment], fillings: list[Filling]) -> None:
         self.condiments = condiments
         self.fillings = fillings
+        self._effects = None
 
     @property
     def effects(self) -> EffectList:
-        _, power_sum, type_sum = self._get_attr_sums().values()
-        dominant_types = [*type_sum.items()][:3]
-        types = sort_types(dominant_types)
-        levels = calculate_levels(dominant_types)
-        powers = [
-            power
-            for power, value in power_sum.items()
-            if (power != Power.SPARKLING) or (value >= 2000)
-        ][:3]
-        return EffectList(zip(powers, types, levels))
+        if self._effects is None:
+            _, power_sum, type_sum = self._get_attr_sums().values()
+            dominant_types = [*type_sum.items()][:3]
+            types = sort_types(dominant_types)
+            levels = calculate_levels(dominant_types)
+            powers = [
+                power
+                for power, value in power_sum.items()
+                if (power != Power.SPARKLING) or (value >= 2000)
+            ][:3]
+            self._effects = EffectList(zip(powers, types, levels))
+        return self._effects
 
     @property
     def ingredients(self) -> list[Ingredient]:
@@ -187,3 +190,11 @@ class Recipe:
     def __repr__(self) -> str:
         s = "s" if len(self.ingredients) != 1 else ""
         return f"Recipe({len(self.ingredients)} ingredient{s})"
+
+    def add_ingredient(self, ingredient: Ingredient) -> None:
+        """Add ingredient to recipe and reset its effects."""
+        self._effects = None  # Reset effects
+        if ingredient.is_condiment:
+            self.condiments.append(cast(Condiment, ingredient))
+        else:
+            self.fillings.append(cast(Filling, ingredient))

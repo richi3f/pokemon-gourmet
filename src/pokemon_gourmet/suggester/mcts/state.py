@@ -2,11 +2,9 @@ __all__ = ["Sandwich", "State"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from typing import cast
 
 from pokemon_gourmet.enums import Power
 from pokemon_gourmet.sandwich.effect import EffectList
-from pokemon_gourmet.sandwich.ingredient import Condiment, Filling
 from pokemon_gourmet.sandwich.ingredient_data import (
     CONDIMENTS,
     FILLINGS,
@@ -101,8 +99,5 @@ class Sandwich(Recipe, State):
             next_state.is_finished = True
         elif isinstance(action, SelectIngredient):
             ingredient = INGREDIENTS[action.ingredient_name]
-            if ingredient.is_condiment:
-                next_state.condiments.append(cast(Condiment, ingredient))
-            else:
-                next_state.fillings.append(cast(Filling, ingredient))
+            next_state.add_ingredient(ingredient)
         return next_state
