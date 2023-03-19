@@ -1,4 +1,4 @@
-__all__ = ["recipe_generator"]
+__all__ = ["RecipeGenerator"]
 __version__ = (0, 0, 0)
 
-from pokemon_gourmet.suggester.generator import recipe_generator
+from pokemon_gourmet.suggester.generator import RecipeGenerator

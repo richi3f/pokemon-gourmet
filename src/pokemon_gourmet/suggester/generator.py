@@ -1,6 +1,6 @@
-__all__ = ["recipe_generator", "validate_targets"]
+__all__ = ["RecipeGenerator", "validate_targets"]
 
-from typing import Any, Iterable, Iterator, Union
+from typing import Any, Iterable, Iterator, Union, cast
 
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
@@ -57,31 +57,37 @@ def validate_targets(targets: EffectList) -> None:
         raise InvalidEffects("No effect (other than Egg Power) should be typeless.")
 
 
-def recipe_generator(
-    targets: Iterable[CouldBeTarget], max_iter: int, mcts_kwargs: dict[str, Any]
-) -> Iterator[State]:
-    """Run MCTS to generate sandwich recipes that meet the target effects.
+class RecipeGenerator(Iterator[Sandwich]):
+    """Use Monte Carlo tree search to explore ingredient combinations and
+    generate recipes that match the target effects.
 
     Args:
-        targets: Desired effects in suggested sandwich recipes
-        max_iter: Number of times to run the MCTS
-        mcts_kwargs: Arguments to initialize the MCTS object
-
-    Yields:
-        Sandwiches
+        targets: Desired effects on the output sandwich
+        num_trees: Number of trees to grow and explore
     """
-    # Parse and validate input
-    i = 0
-    targets = parse_targets(targets)
-    validate_targets(targets)
-    mcts = MonteCarloTreeSearch(**mcts_kwargs)
-    while i < max_iter:
-        current_state = Sandwich(targets)
-        # Run game until a solution is found
+
+    def __init__(
+        self, targets: Iterable[CouldBeTarget], num_trees: int, **mcts_kwargs: Any
+    ) -> None:
+        self.targets = parse_targets(targets)
+        validate_targets(self.targets)
+        self.trees = 0
+        self.num_trees = num_trees
+        self.mcts = MonteCarloTreeSearch(**mcts_kwargs)
+
+    def __next__(self) -> Sandwich:
+        if self.trees >= self.num_trees:
+            raise StopIteration
+        self.trees += 1
+        current_state = Sandwich(self.targets)
+        # Run MCTS until a sandwich is found
         while not current_state.is_terminal:
-            node = mcts.search(current_state)
+            node = self.mcts.search(current_state)
             assert node.parent_action is not None
             current_state = current_state.move(node.parent_action)
         else:
-            i += 1
-            yield current_state
+            return cast(Sandwich, current_state)
+
+    def __iter__(self) -> "RecipeGenerator":
+        self.trees = 0
+        return self

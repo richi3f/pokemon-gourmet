@@ -60,12 +60,12 @@ class Node:
 
     def __repr__(self) -> str:
         s = "s" if self._num_visits != 1 else ""
-        return f"State({self._num_visits} visit{s}, {self._total_reward} reward)"
+        return f"State({self._num_visits} visit{s}, {self._total_reward:.3f} reward)"
 
     def __str__(self) -> str:
         return (
             f"State: {self.state}\nNumber of visits: {self._num_visits}\n"
-            f"Total reward: {self._total_reward}"
+            f"Total reward: {self._total_reward:.3f}"
         )
 
 

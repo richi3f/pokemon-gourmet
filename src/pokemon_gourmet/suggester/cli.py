@@ -10,7 +10,7 @@ import click
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import EffectList
 from pokemon_gourmet.sandwich.ingredient import Ingredient
-from pokemon_gourmet.suggester.generator import recipe_generator
+from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
 
 
@@ -96,14 +96,14 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
     "--exploration-constant",
     default=1,
     type=float,
-    help="Bias towards exploration of untried ingredients",
+    help="Bias towards exploration of less tried ingredients",
 )
 @click.option(
     "-w",
     "--max-walltime",
     default=10000,
     type=int,
-    help="Maximum time (in milliseconds) per iteration",
+    help="Maximum time (in ms) to select an ingredient",
 )
 @click.pass_context
 def main(
@@ -124,7 +124,7 @@ def main(
         exploration_constant=exploration_constant / sqrt(2),
         max_walltime=max_walltime,
     )
-    sandwich = next(recipe_generator(targets, 1, mcts_kwargs))
+    sandwich = next(RecipeGenerator(targets, 1, **mcts_kwargs))
 
     filling_names = format_ingredients(getattr(sandwich, "fillings"))
     condiment_names = format_ingredients(getattr(sandwich, "condiments"))
