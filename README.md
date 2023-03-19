@@ -89,7 +89,7 @@ recipe .
   - `random` - randomly picks any ingredient.
   - `early_stopping` - favors short recipes by having a high chance of stopping
     the sandwich recipe at the earliest possibility.
-  - `weighted_allocator` - assigns a weight to each ingredient based on the
+  - `weighted_allocation` - assigns a weight to each ingredient based on the
     free space in the sandwich. This intends to balance the number of fillings
     and condiments in the sandwich.
 
@@ -107,7 +107,7 @@ Attempt to generate a recipe using the short recipe rollout policy with a 50%
 chance to finish the recipe early.
 
 ```bash
-gourmet title,bug encounter,bug teensy,water -r early_stopping --prob 0.5
+gourmet title,bug encounter,bug teensy,water -r early_stopping --stop_prob 0.5
 ```
 
 Grow and explore 10 trees using the weighted allocator rollout policy.
@@ -118,8 +118,8 @@ from pokemon_gourmet import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import ROLLOUT_POLICIES
 
 rollout_policy = partial(
-    ROLLOUT_POLICIES["weighted_allocator"],
-    finish_prob=0.05
+    ROLLOUT_POLICIES["weighted_allocation"],
+    stop_prob=0.05
 )
 
 suggester = RecipeGenerator(
