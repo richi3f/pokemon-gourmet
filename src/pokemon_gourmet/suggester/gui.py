@@ -12,6 +12,7 @@ import streamlit as st
 from griffe.dataclasses import Docstring
 from griffe.docstrings.dataclasses import DocstringSectionParameters
 from griffe.docstrings.parsers import Parser
+from pandas.io.formats.style_render import CSSStyles
 
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import Effect, EffectList
@@ -19,7 +20,6 @@ from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
-from pokemon_gourmet.suggester.mcts.state import Sandwich
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
@@ -43,6 +43,8 @@ TYPE_COLORS = {
     Type.DARK: (80, 65, 63),
     Type.FAIRY: (240, 118, 220),
 }
+
+TABLE_STYLES = cast(CSSStyles, [dict(selector="", props=[("width", "100%")])])
 
 
 def get_target_attr(attr_name: str) -> list[str]:
@@ -324,20 +326,39 @@ def main() -> None:
                     sandwich.condiments, sandwich.fillings
                 )
                 score = sandwich.get_reward()
-                num_ingredients = len(sandwich.ingredients)
+                num_condiments = len(sandwich.condiments)
+                num_fillings = len(sandwich.fillings)
 
-                rows.append((effects_html, ingredients_html, score, num_ingredients))
-                df = pd.DataFrame(
-                    rows, columns=["Effects", "Ingredients", "Match", "Size"]
-                )
-                df_html = (
-                    df.sort_values(["Match", "Size"], ascending=[False, True])
-                    .drop_duplicates(["Ingredients"])
-                    .style.format(
-                        {"Match": lambda x: f"{min(1.0, cast(float, x)):.3f}"}
+                rows.append(
+                    (
+                        effects_html,
+                        ingredients_html,
+                        score,
+                        num_condiments,
+                        num_fillings,
                     )
-                    .hide(axis="index")
-                    .hide(["Size"], axis="columns")
+                )
+                df = pd.DataFrame(
+                    rows,
+                    columns=[
+                        "Effects",
+                        "Ingredients",
+                        "Score",
+                        "Condiments",
+                        "Fillings",
+                    ],
+                )
+                df.drop_duplicates(["Ingredients"], inplace=True)
+                df.sort_values(
+                    ["Score", "Condiments", "Fillings"],
+                    ascending=[False, True, True],
+                    inplace=True,
+                )
+                df.reset_index(drop=True, inplace=True)
+                df.index += 1
+                df_html = (
+                    df.style.set_table_styles(TABLE_STYLES)
+                    .hide(["Score", "Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )
                 with placeholder.container():
