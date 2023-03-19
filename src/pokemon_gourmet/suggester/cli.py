@@ -85,6 +85,13 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
 )
 @click.argument("targets_str", nargs=3, type=str)
 @click.option(
+    "-n",
+    "--num-trees",
+    default=10,
+    type=int,
+    help="Number of trees to grow and explore",
+)
+@click.option(
     "-r",
     "--rollout-policy",
     default="random",
@@ -101,7 +108,7 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
 @click.option(
     "-w",
     "--max-walltime",
-    default=10000,
+    default=1000,
     type=int,
     help="Maximum time (in ms) to select an ingredient",
 )
@@ -109,6 +116,7 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
 def main(
     ctxt: click.Context,
     targets_str: tuple[str, str, str],
+    num_trees: int,
     rollout_policy: str,
     exploration_constant: float,
     max_walltime: int,
@@ -124,15 +132,18 @@ def main(
         exploration_constant=exploration_constant / sqrt(2),
         max_walltime=max_walltime,
     )
-    sandwich = next(RecipeGenerator(targets, 1, **mcts_kwargs))
+    recipe_gen = RecipeGenerator(targets, num_trees, **mcts_kwargs)
+    for sandwich in recipe_gen:
+        if not sandwich:
+            continue
 
-    filling_names = format_ingredients(getattr(sandwich, "fillings"))
-    condiment_names = format_ingredients(getattr(sandwich, "condiments"))
+        filling_names = format_ingredients(getattr(sandwich, "fillings"))
+        condiment_names = format_ingredients(getattr(sandwich, "condiments"))
 
-    print(
-        f"{sandwich}\nMatch: {min(1.0, sandwich.get_reward()):.3f}\n"
-        f"Fillings:{filling_names}\nCondiments:{condiment_names}"
-    )
+        print(
+            f"{sandwich}\nMatch: {min(1.0, sandwich.get_reward()):.3f}\n"
+            f"Fillings:{filling_names}\nCondiments:{condiment_names}"
+        )
 
 
 if __name__ == "__main__":
