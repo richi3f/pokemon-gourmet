@@ -107,8 +107,8 @@ class Recipe:
                 for power, value in power_sum.items()
                 if (power != Power.SPARKLING) or (value >= 2000)
             ][:3]
-            self._effects = EffectList(zip(powers, types, levels))
-        return self._effects
+            self._effects = [*zip(powers, types, levels)]
+        return EffectList(self._effects)
 
     @property
     def ingredients(self) -> list[Ingredient]:
