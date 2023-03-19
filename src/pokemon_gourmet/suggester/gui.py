@@ -226,7 +226,7 @@ def main() -> None:
             "[documentation](https://github.com/richi3f/pokemon-gourmet"
             "#sandwich-pokémon-gourmet). You are also welcome to contact me "
             "on [Twitter](https://twitter.com/richi3f) or [GitHub]"
-            "[https://github.com/richi3f/pokemon-gourmet/issues/new] if you "
+            "(https://github.com/richi3f/pokemon-gourmet/issues/new) if you "
             "have feedback or bugs to report."
         )
     )
