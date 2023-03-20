@@ -3,17 +3,25 @@ __all__ = ["MonteCarloTreeSearch"]
 import random
 from math import log, sqrt
 from time import time
-from typing import Optional
+from typing import Optional, Callable, Iterator, Sequence, Type, Union
 
-from pokemon_gourmet.suggester.mcts.action import Action
+from pokemon_gourmet.suggester.mcts.action import (
+    Action,
+    FinishSandwich,
+    SelectBaseRecipe,
+    SelectCondiment,
+    SelectFilling,
+)
 from pokemon_gourmet.suggester.mcts.policies import (
     RolloutPolicy,
     random_rollout_policy,
 )
 from pokemon_gourmet.suggester.mcts.state import State
 
+FilterFunction = Callable[["Node"], bool]
 
-class Node:
+
+class Node(Sequence):
     def __init__(
         self,
         state: State,
@@ -49,7 +57,7 @@ class Node:
             self.parent.backpropagate(reward)
 
     def expand(self) -> "Node":
-        """From the present state, generate a next state based on the next
+        """From the present state, generate a next state based on a random
         untried action."""
         idx = random.randint(0, len(self._untried_actions) - 1)
         action = self._untried_actions.pop(idx)
@@ -57,6 +65,52 @@ class Node:
         child_node = Node(next_state, self, action)
         self.children[action] = child_node
         return child_node
+
+    def get_leaves(
+        self, filter_func: Optional[FilterFunction] = None
+    ) -> Iterator["Node"]:
+        """Yield all succesors that are terminal nodes."""
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            if node.is_terminal_node and (filter_func is None or filter_func(node)):
+                yield node
+            for child in node.children.values():
+                stack.append(child)
+
+    def reset_node(self) -> None:
+        """Clear a node's total reward and number of visits, but keep edges."""
+        self._total_reward = 1e-8
+        self._num_visits = 1
+        for child in self:
+            child.reset_node()
+
+    def __getitem__(
+        self, key: Union[int, str, tuple[str, str], Action, Type[FinishSandwich]]
+    ) -> "Node":
+        if isinstance(key, Action):
+            return self.children[key]
+        if isinstance(key, type) and issubclass(key, FinishSandwich):
+            return self.children[FinishSandwich()]
+        if isinstance(key, tuple):
+            return self.children[SelectBaseRecipe(*key)]
+        if isinstance(key, str):
+            try:
+                return self.children[SelectCondiment(key)]
+            except KeyError:
+                return self.children[SelectFilling(key)]
+        if isinstance(key, int):
+            if key >= len(self):
+                raise IndexError()
+            children = [*self]
+            return children[key]
+        raise KeyError()
+
+    def __iter__(self) -> Iterator["Node"]:
+        return iter(self.children.values())
+
+    def __len__(self) -> int:
+        return len(self.children)
 
     def __repr__(self) -> str:
         s = "s" if self._num_visits != 1 else ""
@@ -72,6 +126,7 @@ class Node:
 class MonteCarloTreeSearch:
     def __init__(
         self,
+        initial_state: State,
         rollout_policy: RolloutPolicy = random_rollout_policy,
         exploration_constant: float = 1 / sqrt(2),
         max_walltime: int = 1000,
@@ -79,7 +134,7 @@ class MonteCarloTreeSearch:
         self.rollout_policy = rollout_policy
         self.exploration_constant = exploration_constant
         self.max_walltime = max_walltime
-        self.root = None
+        self.root = Node(initial_state)
 
     def rollout(self, node: Node) -> float:
         """Simulate a game until there is an outcome."""
@@ -110,17 +165,14 @@ class MonteCarloTreeSearch:
             weights.append(uct)
         return random.choices(children, weights, k=1)[0]
 
-    def search(self, initial_state: State) -> Node:
+    def search(self, parent: Node) -> Node:
         """Return the node corresponding to the best possible move."""
-        root = Node(initial_state)
-        if self.root is None:
-            self.root = root
         max_walltime = time() + self.max_walltime / 1000
         while time() < max_walltime:
-            node = self.select_node(self.root)
+            node = self.select_node(parent)
             reward = self.rollout(node)
             node.backpropagate(reward)
-        best_child = self.select_best_child(self.root)
+        best_child = self.select_best_child(parent)
         return best_child
 
     def select_best_child(self, parent: Node) -> Node:
