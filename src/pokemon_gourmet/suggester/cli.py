@@ -4,6 +4,7 @@ import inspect
 from collections import Counter
 from functools import partial
 from math import sqrt
+from operator import methodcaller
 
 import click
 
@@ -86,10 +87,10 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
 @click.argument("targets_str", nargs=3, type=str)
 @click.option(
     "-n",
-    "--num-trees",
+    "--num-iter",
     default=10,
     type=int,
-    help="Number of trees to grow and explore",
+    help="Number of times to explore the decision tree",
 )
 @click.option(
     "-r",
@@ -116,7 +117,7 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
 def main(
     ctxt: click.Context,
     targets_str: tuple[str, str, str],
-    num_trees: int,
+    num_iter: int,
     rollout_policy: str,
     exploration_constant: float,
     max_walltime: int,
@@ -132,16 +133,20 @@ def main(
         exploration_constant=exploration_constant / sqrt(2),
         max_walltime=max_walltime,
     )
-    recipe_gen = RecipeGenerator(targets, num_trees, **mcts_kwargs)
-    for sandwich in recipe_gen:
-        if not sandwich:
-            continue
+    recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
 
-        filling_names = format_ingredients(getattr(sandwich, "fillings"))
-        condiment_names = format_ingredients(getattr(sandwich, "condiments"))
+    unique_recipes = set()
+    for recipes in recipe_gen:
+        if not recipes:
+            continue
+        unique_recipes.update(recipes)
+
+    for recipe in sorted(unique_recipes, key=methodcaller("get_reward"), reverse=True):
+        filling_names = format_ingredients(getattr(recipe, "fillings"))
+        condiment_names = format_ingredients(getattr(recipe, "condiments"))
 
         print(
-            f"{sandwich}\nMatch: {min(1.0, sandwich.get_reward()):.3f}\n"
+            f"{recipe}\nMatch: {min(1.0, recipe.get_reward()):.3f}\n"
             f"Fillings:{filling_names}\nCondiments:{condiment_names}"
         )
 

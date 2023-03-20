@@ -6,7 +6,7 @@ from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
 from pokemon_gourmet.suggester.exceptions import InvalidEffects
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
-from pokemon_gourmet.suggester.mcts.state import Sandwich, State
+from pokemon_gourmet.suggester.mcts.state import Sandwich
 
 CouldBeTarget = Union[Effect, EffectTuple, Iterable[str]]
 
@@ -57,37 +57,49 @@ def validate_targets(targets: EffectList) -> None:
         raise InvalidEffects("No effect (other than Egg Power) should be typeless.")
 
 
-class RecipeGenerator(Iterator[Sandwich]):
+class RecipeGenerator(Iterator[list[Sandwich]]):
     """Use Monte Carlo tree search to explore ingredient combinations and
     generate recipes that match the target effects.
 
     Args:
         targets: Desired effects on the output sandwich
-        num_trees: Number of trees to grow and explore
+        num_iter: Number of times to explore the decision tree
     """
 
     def __init__(
-        self, targets: Iterable[CouldBeTarget], num_trees: int, **mcts_kwargs: Any
+        self, targets: Iterable[CouldBeTarget], num_iter: int, **mcts_kwargs: Any
     ) -> None:
         self.targets = parse_targets(targets)
         validate_targets(self.targets)
-        self.trees = 0
-        self.num_trees = num_trees
-        self.mcts = MonteCarloTreeSearch(**mcts_kwargs)
+        self.it = 0
+        self.num_iter = num_iter
+        self.mcts_kwargs = mcts_kwargs
+        initial_state = Sandwich(self.targets)
+        self.mcts = MonteCarloTreeSearch(initial_state, **self.mcts_kwargs)
+        self.saved_results = set()
 
-    def __next__(self) -> Sandwich:
-        if self.trees >= self.num_trees:
-            raise StopIteration
-        self.trees += 1
-        current_state = Sandwich(self.targets)
-        # Run MCTS until a sandwich is found
-        while not current_state.is_terminal:
-            node = self.mcts.search(current_state)
+    def _search(self) -> None:
+        node = self.mcts.root
+        if node._num_visits > 0:
+            node.reset_node()
+        while not node.is_terminal_node:
+            node = self.mcts.search(node)
             assert node.parent_action is not None
-            current_state = current_state.move(node.parent_action)
-        else:
-            return cast(Sandwich, current_state)
+            node.state.move(node.parent_action)
+
+    def __next__(self) -> list[Sandwich]:
+        if self.it >= self.num_iter:
+            raise StopIteration
+        self.it += 1
+        self._search()
+        states = [
+            node.state
+            for node in self.mcts.root.get_leaves()
+            if node.state not in self.saved_results
+        ]
+        self.saved_results.update(states)
+        return cast(list[Sandwich], states)
 
     def __iter__(self) -> "RecipeGenerator":
-        self.trees = 0
+        self.it = 0
         return self

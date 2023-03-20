@@ -254,14 +254,20 @@ def main() -> None:
             )
 
     with st.expander("Advanced options"):
+        num_results = int(
+            st.number_input(
+                "Number of results",
+                value=10,
+                min_value=1,
+                max_value=100,
+                help="Number of results to display",
+            )
+        )
         num_iter = int(
             st.number_input(
-                "Number of trees",
+                "Number of iterations",
                 value=10,
-                help=(
-                    "Number of trees to generate and explore. Note that only "
-                    "trees that exactly match the target effects are recorded"
-                ),
+                help="Number of times to explore the decision tree",
             )
         )
         exploration_constant = st.number_input(
@@ -310,34 +316,36 @@ def main() -> None:
                 max_walltime=max_walltime,
             )
 
-            rows = []
             placeholder = st.empty()
 
             recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
-            for i, sandwich in enumerate(recipe_gen):
+            for i, recipes in enumerate(recipe_gen):
                 pbar_val = (i + 1) / num_iter
                 pbar.progress(pbar_val, f"Operation in progress. ({i+1}/{num_iter})")
 
-                if not sandwich:
+                if not recipes:
                     continue
 
-                effects_html = style_effects(sandwich.effects)
-                ingredients_html = style_ingredients(
-                    sandwich.condiments, sandwich.fillings
-                )
-                score = sandwich.get_reward()
-                num_condiments = len(sandwich.condiments)
-                num_fillings = len(sandwich.fillings)
-
-                rows.append(
-                    (
-                        effects_html,
-                        ingredients_html,
-                        score,
-                        num_condiments,
-                        num_fillings,
+                rows = []
+                for recipe in set(recipes):
+                    effects_html = style_effects(recipe.effects)
+                    ingredients_html = style_ingredients(
+                        recipe.condiments, recipe.fillings
                     )
-                )
+                    score = recipe.get_reward()
+                    num_condiments = len(recipe.condiments)
+                    num_fillings = len(recipe.fillings)
+
+                    rows.append(
+                        (
+                            effects_html,
+                            ingredients_html,
+                            score,
+                            num_condiments,
+                            num_fillings,
+                        )
+                    )
+
                 df = pd.DataFrame(
                     rows,
                     columns=[
@@ -348,6 +356,7 @@ def main() -> None:
                         "Fillings",
                     ],
                 )
+                num_recipes = df.shape[0]
                 df.drop_duplicates(["Ingredients"], inplace=True)
                 df.sort_values(
                     ["Score", "Condiments", "Fillings"],
@@ -357,13 +366,19 @@ def main() -> None:
                 df.reset_index(drop=True, inplace=True)
                 df.index += 1
                 df_html = (
-                    df.style.set_table_styles(TABLE_STYLES)
+                    df.head(num_results)
+                    .style.set_table_styles(TABLE_STYLES)
                     .hide(["Score", "Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )
+                num_dups = num_recipes - df.shape[0]
+                s = "s" if num_dups != 1 else ""
                 with placeholder.container():
                     st.subheader(":sandwich: Sandwich recipes")
                     st.markdown(df_html, unsafe_allow_html=True)
+                    st.caption(
+                        f"Total recipes found: {num_recipes} ({num_dups} duplicate{s})"
+                    )
 
 
 if __name__ == "__main__":

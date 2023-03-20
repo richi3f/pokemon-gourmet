@@ -72,8 +72,8 @@ recipe .
 
 ### Configuration
 
-- `num_trees` (`n` in CLI) - number of trees to grow and explore. Each tree is
-  a new instance of the search algorithm.
+- `num_iter` (`n` in CLI) - number of times to explore the decision tree. Each
+  iteration may open new paths.
 
 - `exploration_constant` (`c` in CLI) - bias of the algorithm towards
   exploration of less tried ingredients.
@@ -110,7 +110,7 @@ chance to finish the recipe early.
 gourmet title,bug encounter,bug teensy,water -r early_stopping --stop_prob 0.5
 ```
 
-Grow and explore 10 trees using the weighted allocator rollout policy.
+Run the search algorithm 10 times using the weighted allocation rollout policy.
 
 ```python
 from functools import partial
@@ -124,7 +124,7 @@ rollout_policy = partial(
 
 suggester = RecipeGenerator(
     desired_effects,
-    num_trees=10,
+    num_iter=10,
     max_walltime=1000,
     rollout_policy=rollout_policy,
 )
@@ -143,7 +143,7 @@ matching effects).</dd>
 <dt>Why did it not find any recipe matching my target effects?</dt>
 <dd>The search process is stochastic, so there is no guarantee that two searches
 will have the same results. For this reason, I recommend setting the
-<code>num_trees</code> argument to 10 or more. This should result in at least a
+<code>num_iter</code> argument to 10 or more. This should result in at least a
 couple of recipes that match your target effects. Also, increase the
 <code>max_walltime</code> to give time to the searcher to explore the decision
 landscape.</dd>
