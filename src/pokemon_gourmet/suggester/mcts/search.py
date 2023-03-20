@@ -79,6 +79,7 @@ class MonteCarloTreeSearch:
         self.rollout_policy = rollout_policy
         self.exploration_constant = exploration_constant
         self.max_walltime = max_walltime
+        self.root = None
 
     def rollout(self, node: Node) -> float:
         """Simulate a game until there is an outcome."""
@@ -92,35 +93,46 @@ class MonteCarloTreeSearch:
         """Select node to rollout."""
         while not current_node.is_terminal_node:
             if current_node.is_fully_expanded:
-                current_node = self.best_child(current_node, self.exploration_constant)
+                current_node = self.select_child(current_node)
             else:
                 return current_node.expand()
         return current_node
 
+    def select_child(self, parent: Node) -> Node:
+        """Draw child node sample according to UCT."""
+        children = [*parent.children.values()]
+        weights = []
+        for child in children:
+            score = child._total_reward / child._num_visits
+            uct = score + self.exploration_constant * sqrt(
+                2 * log(parent._num_visits) / child._num_visits
+            )
+            weights.append(uct)
+        return random.choices(children, weights, k=1)[0]
+
     def search(self, initial_state: State) -> Node:
         """Return the node corresponding to the best possible move."""
         root = Node(initial_state)
+        if self.root is None:
+            self.root = root
         max_walltime = time() + self.max_walltime / 1000
         while time() < max_walltime:
-            node = self.select_node(root)
+            node = self.select_node(self.root)
             reward = self.rollout(node)
             node.backpropagate(reward)
-        best_child = self.best_child(root, 0)
+        best_child = self.select_best_child(self.root)
         return best_child
 
-    def best_child(self, node: Node, exploration_constant: float) -> Node:
+    def select_best_child(self, parent: Node) -> Node:
         """Select the node's best child."""
-        max_uct = float("-inf")
+        max_score = float("-inf")
         best_children: list[Node] = []
-        for child in node.children.values():
-            uct = child._total_reward / child._num_visits
-            uct += exploration_constant * sqrt(
-                2 * log(node._num_visits) / child._num_visits
-            )
-            if uct > max_uct:
-                max_uct = uct
+        for child in parent.children.values():
+            score = child._total_reward / child._num_visits
+            if score > max_score:
+                max_score = score
                 best_children = [child]
-            elif uct == max_uct:
+            elif score == max_score:
                 best_children.append(child)
         if len(best_children) > 1:
             return random.choice(best_children)
