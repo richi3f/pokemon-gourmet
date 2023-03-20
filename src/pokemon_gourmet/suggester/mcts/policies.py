@@ -12,6 +12,7 @@ from typing import Callable
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
+    SelectBaseRecipe,
     SelectCondiment,
     SelectFilling,
 )
@@ -85,6 +86,8 @@ def weighted_allocation_rollout_policy(
         raise ValueError("Probability must be between 0 and 1 (exclusive).")
     possible_actions = state.get_possible_actions()
     action_types = Counter(map(type, state.get_possible_actions()))
+    if SelectBaseRecipe in action_types:
+        return random.choice(possible_actions)
     free_slots = 10 - len(state.ingredients)
     finish_weight = 100 * stop_prob * action_types[FinishSandwich]
     add_ingredient_weight = 100 - finish_weight

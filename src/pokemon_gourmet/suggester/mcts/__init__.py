@@ -6,12 +6,14 @@ __all__ = [
     "Sandwich",
     "SelectCondiment",
     "SelectFilling",
+    "SelectBaseRecipe",
     "State",
 ]
 
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
+    SelectBaseRecipe,
     SelectCondiment,
     SelectFilling,
 )

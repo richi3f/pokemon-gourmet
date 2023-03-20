@@ -2,18 +2,28 @@ __all__ = ["Sandwich", "State"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
+from itertools import filterfalse, product
+from operator import attrgetter
 
 from pokemon_gourmet.enums import Power
 from pokemon_gourmet.sandwich.effect import EffectList
-from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
+from pokemon_gourmet.sandwich.ingredient import Ingredient
+from pokemon_gourmet.sandwich.ingredient_data import (
+    CONDIMENTS,
+    FILLINGS,
+    INGREDIENTS,
+)
 from pokemon_gourmet.sandwich.recipe import Recipe
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
+    SelectBaseRecipe,
     SelectCondiment,
     SelectFilling,
     SelectIngredient,
 )
+
+IS_HERBA_MYSTICA = attrgetter("is_herba_mystica")
 
 
 class State(metaclass=ABCMeta):
@@ -42,23 +52,6 @@ class Sandwich(Recipe, State):
             raise ValueError("Target effects should be exactly three.")
         self.targets = targets
         self._is_finished = False
-        self._valid_condiments: list[str] = []
-        self._valid_fillings: list[str] = []
-        for ingredient in INGREDIENTS.values():
-            # Title power requires Herba Mystica
-            # Sparkling power requires two Herba Mystica
-            if ingredient.is_herba_mystica and (
-                Power.TITLE not in self.targets.powers
-                or (
-                    Power.SPARKLING not in self.targets.powers
-                    and self.has_herba_mystica
-                )
-            ):
-                continue
-            if ingredient.is_condiment:
-                self._valid_condiments.append(ingredient.name)
-            else:
-                self._valid_fillings.append(ingredient.name)
 
     def __bool__(self) -> bool:
         return self.get_reward() >= 1
@@ -78,15 +71,54 @@ class Sandwich(Recipe, State):
         )
 
     def get_possible_actions(self) -> list[Action]:
+        """Return a list of possible actions.
+
+        If the recipe is empty, return a list of `SelectBaseRecipe` actions.
+        A base recipe consists of one condiment and one filling. If the desired
+        effects include Title or Sparkling Power, the condiment will be a Herba
+        Mystica.
+
+        If the recipe already has ingredients, return a list with one
+        `FinishSandwich` action and one `SelectIngredient` action for each
+        valid condiment and filling. Valid condiments are all condiments,
+        except Herba Mystica (unless the desired effects include Sparkling
+        Power and the sandwich only has one condiment).
+
+        These rules guarantee that recipes have only the strictly necessary
+        number of Herba Mystica: one if Title Power desired or two if Sparkling
+        Power desired.
+        """
         possible_actions = []
-        if self.is_legal:
+        if len(self) == 0:
+
+            def validate_condiment(condiment: Ingredient) -> bool:
+                return not (
+                    condiment.is_herba_mystica
+                    ^ (
+                        Power.TITLE in self.targets.powers
+                        or Power.SPARKLING in self.targets.powers
+                    )
+                )
+
+            # Force base recipe to include Herba Mystica if Title/Sparkling Power
+            valid_condiments = filter(validate_condiment, CONDIMENTS)
+            for condiment, filling in product(valid_condiments, FILLINGS):
+                possible_actions.append(SelectBaseRecipe(condiment.name, filling.name))
+        else:
             possible_actions.append(FinishSandwich())
-        if len(self.condiments) < 4:
-            for ingredient_name in self._valid_condiments:
-                possible_actions.append(SelectCondiment(ingredient_name))
-        if len(self.fillings) < 6:
-            for ingredient_name in self._valid_fillings:
-                possible_actions.append(SelectFilling(ingredient_name))
+            if len(self.condiments) < 4:
+                # Force second condiment to be Herba Mystica if Sparkling Power
+                if Power.SPARKLING in self.targets.powers and len(self.condiments) == 1:
+                    valid_condiments = filter(IS_HERBA_MYSTICA, CONDIMENTS)
+                # Otherwise, exclude Herba Mystica from recipe
+                else:
+                    valid_condiments = filterfalse(IS_HERBA_MYSTICA, CONDIMENTS)
+                for ingredient in valid_condiments:
+                    possible_actions.append(SelectCondiment(ingredient.name))
+
+            if len(self.fillings) < 6:
+                for ingredient in FILLINGS:
+                    possible_actions.append(SelectFilling(ingredient.name))
         return possible_actions
 
     def get_reward(self) -> float:
@@ -107,4 +139,9 @@ class Sandwich(Recipe, State):
         elif isinstance(action, SelectIngredient):
             ingredient = INGREDIENTS[action.ingredient_name]
             next_state.add_ingredient(ingredient)
+        elif isinstance(action, SelectBaseRecipe):
+            for ingredient_name in action:
+                next_state.add_ingredient(INGREDIENTS[ingredient_name])
+        else:
+            raise TypeError("Unknown action type")
         return next_state
