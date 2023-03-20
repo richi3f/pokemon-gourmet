@@ -1,6 +1,7 @@
 __all__ = ["Recipe"]
 
 from collections import defaultdict
+from collections.abc import Collection, Hashable, Iterator
 from operator import itemgetter
 from typing import Any, cast
 
@@ -89,7 +90,7 @@ def sort_types(dominant_types: list[tuple[Type, int]]) -> tuple[Type, Type, Type
         return (types[0], types[2], types[1])
 
 
-class Recipe:
+class Recipe(Collection, Hashable):
     def __init__(self, condiments: list[Condiment], fillings: list[Filling]) -> None:
         self.condiments = condiments
         self.fillings = fillings
@@ -121,6 +122,14 @@ class Recipe:
     @property
     def has_herba_mystica(self) -> bool:
         return any(condiment.is_herba_mystica for condiment in self.condiments)
+
+    @property
+    def herba_mystica_count(self) -> int:
+        count = 0
+        for condiment in self.condiments:
+            if condiment.is_herba_mystica:
+                count += 1
+        return count
 
     @classmethod
     def from_str(cls, *ingredient_names: str) -> "Recipe":
@@ -181,6 +190,20 @@ class Recipe:
         attrs["power"] = sort_attr_sum(attrs["power"])
 
         return attrs
+
+    def __contains__(self, ingredient: Ingredient) -> bool:
+        if ingredient.is_condiment:
+            return ingredient in self.condiments
+        return ingredient in self.fillings
+
+    def __hash__(self) -> int:
+        return hash(tuple([ingredient.name for ingredient in sorted(self.ingredients)]))
+
+    def __iter__(self) -> Iterator[Ingredient]:
+        return iter(self.ingredients)
+
+    def __len__(self) -> int:
+        return len(self.ingredients)
 
     def __str__(self) -> str:
         if len(self.ingredients) > 0:
