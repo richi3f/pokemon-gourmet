@@ -1,5 +1,6 @@
-__all__ = ["RecipeGenerator", "validate_targets"]
+__all__ = ["parse_targets", "RecipeGenerator", "validate_targets"]
 
+from operator import attrgetter
 from typing import Any, Iterable, Iterator, Union, cast
 
 from pokemon_gourmet.enums import Power, Type
@@ -104,9 +105,10 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
             raise StopIteration
         self.it += 1
         self._search()
+        # Filter recipes (a recipe state evaluates to True if it's a match)
         states = [
             node.state
-            for node in self.mcts.root.get_leaves()
+            for node in self.mcts.root.get_leaves(attrgetter("state"))
             if node.state not in self.saved_results
         ]
         self.saved_results.update(states)
