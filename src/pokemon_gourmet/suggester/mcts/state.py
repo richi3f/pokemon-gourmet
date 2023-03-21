@@ -139,8 +139,7 @@ class Sandwich(Recipe, State):
             base_reward = len(self.targets & effects)
             # double reward if levels are maximum
             bonus_reward = 100 * sum(levels) if base_reward == 3 else 3
-            filling_penalty = (11 - len(self.fillings)) / 10
-            return bonus_reward * base_reward / 9 * filling_penalty
+            return bonus_reward * base_reward / 9
         return 0
 
     def move(self, action: Action) -> "State":

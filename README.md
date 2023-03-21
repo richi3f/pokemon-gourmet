@@ -147,9 +147,6 @@ searches will render the same results.</dd>
 ingredient will fall out of the sandwich).</dd>
 <dd>Additionally, users can only input desired effect Power and Type. However,
 the algorithm will still try to maximize the levels of each Power.</dd>
-<dt>Are there any improvements planned for this project?</dt>
-<dd>Yes. I'm looking into a better reward function (i.e., how recipes are
-scored) and the possibility of specifying Power level.</dd>
 </dl>
 
 ## Contribute
