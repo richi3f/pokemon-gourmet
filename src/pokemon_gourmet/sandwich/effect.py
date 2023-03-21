@@ -12,6 +12,8 @@ EffectTuple = tuple[Power, EffectType, EffectLevel]
 
 @dataclass(unsafe_hash=True)
 class Effect:
+    """A tuple of Power, Type, and level"""
+
     power: Power
     pokemon_type: EffectType
     level: EffectLevel = None
@@ -29,6 +31,8 @@ class Effect:
 
 
 class EffectList(AbstractSet):
+    """A list of unique effect tuples, that supports set operations"""
+
     def __init__(self, effects: Iterable[Union[Effect, EffectTuple]]) -> None:
         self.powers: set[Power] = set()
         self.types: set[EffectType] = set()
@@ -39,6 +43,14 @@ class EffectList(AbstractSet):
                 self.powers.add(effect.power)
                 self.types.add(effect.pokemon_type)
                 self.tuples.append(effect)
+
+    def remove_levels(self) -> list[int]:
+        """Remove and return effect levels."""
+        levels = []
+        for i in range(len(self)):
+            levels.append(self.tuples[i].level)
+            self.tuples[i].level = None
+        return levels
 
     def __contains__(self, value: Union[Power, Type, Effect, tuple]) -> bool:
         if isinstance(value, (Effect, tuple)):
@@ -58,11 +70,3 @@ class EffectList(AbstractSet):
 
     def __repr__(self) -> str:
         return ",\n".join(map(str, self.tuples))
-
-    def remove_levels(self) -> list[int]:
-        """Remove and return effect levels."""
-        levels = []
-        for i in range(len(self)):
-            levels.append(self.tuples[i].level)
-            self.tuples[i].level = None
-        return levels

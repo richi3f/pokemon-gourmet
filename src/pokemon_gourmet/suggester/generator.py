@@ -12,6 +12,18 @@ CouldBeTarget = Union[Effect, EffectTuple, Iterable[str]]
 
 
 def parse_targets(putative_targets: Iterable[CouldBeTarget]) -> EffectList:
+    """Return an effect list from a list of putative effects.
+
+    Args:
+        putative_targets:
+            List of `pokemon_gourmet.sandwich.effect.Effect` instances, tuples
+            of `pokemon_gourmet.enums.Power` and `pokemon_gourmet.enums.Type`,
+            or tuples containing one string corresponding to Power and one
+            string corresponding to a Pokémon Type
+
+    Returns:
+        Effect list
+    """
     targets = []
     for effect in putative_targets:
         power, type_, *_ = effect
@@ -62,8 +74,8 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
     generate recipes that match the target effects.
 
     Args:
-        targets: Desired effects on the output sandwich
-        num_iter: Number of times to explore the decision tree
+        targets: Desired effects on the output sandwich recipes
+        num_iter: Number of times to explore the search tree
     """
 
     def __init__(

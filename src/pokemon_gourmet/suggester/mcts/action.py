@@ -11,10 +11,14 @@ from dataclasses import dataclass
 
 
 class Action(Hashable):
+    """A trigger for a state transition"""
+
     ...
 
 
 class FinishSandwich(Action):
+    """Finalize a recipe"""
+
     def __eq__(self, other: "FinishSandwich") -> bool:
         return self.__class__ == other.__class__
 
@@ -27,6 +31,8 @@ class FinishSandwich(Action):
 
 @dataclass(unsafe_hash=True)
 class SelectBaseRecipe(Action, Iterable):
+    """Select a condiment and a filling to start a recipe with"""
+
     condiment_name: str
     filling_name: str
 
@@ -46,6 +52,8 @@ class SelectBaseRecipe(Action, Iterable):
 
 @dataclass(unsafe_hash=True)
 class SelectIngredient(Action):
+    """Select an ingredient to add to a recipe's list of ingredients"""
+
     ingredient_name: str
 
     def __eq__(self, other: "SelectIngredient") -> bool:
@@ -60,9 +68,13 @@ class SelectIngredient(Action):
 
 @dataclass(unsafe_hash=True)
 class SelectCondiment(SelectIngredient):
+    """Select a condiment to add to a recipe's list of ingredients"""
+
     ...
 
 
 @dataclass(unsafe_hash=True)
 class SelectFilling(SelectIngredient):
+    """Select a filling to add to a recipe's list of ingredients"""
+
     ...

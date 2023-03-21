@@ -3,7 +3,7 @@ __all__ = ["MonteCarloTreeSearch"]
 import random
 from math import log, sqrt
 from time import time
-from typing import Optional, Callable, Iterator, Sequence, Type, Union
+from typing import Callable, Iterator, Optional, Sequence, Type, Union
 
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
@@ -22,6 +22,8 @@ FilterFunction = Callable[["Node"], bool]
 
 
 class Node(Sequence):
+    """A node from a search tree"""
+
     def __init__(
         self,
         state: State,
@@ -36,8 +38,46 @@ class Node(Sequence):
         self._total_reward = 0.0
         self._untried_actions = self.state.get_possible_actions()
 
+    def __getitem__(
+        self, key: Union[int, str, tuple[str, str], Action, Type[FinishSandwich]]
+    ) -> "Node":
+        if isinstance(key, Action):
+            return self.children[key]
+        if isinstance(key, type) and issubclass(key, FinishSandwich):
+            return self.children[FinishSandwich()]
+        if isinstance(key, tuple):
+            return self.children[SelectBaseRecipe(*key)]
+        if isinstance(key, str):
+            try:
+                return self.children[SelectCondiment(key)]
+            except KeyError:
+                return self.children[SelectFilling(key)]
+        if isinstance(key, int):
+            if key >= len(self):
+                raise IndexError()
+            children = [*self]
+            return children[key]
+        raise KeyError()
+
+    def __iter__(self) -> Iterator["Node"]:
+        return iter(self.children.values())
+
+    def __len__(self) -> int:
+        return len(self.children)
+
+    def __repr__(self) -> str:
+        s = "s" if self._num_visits != 1 else ""
+        return f"State({self._num_visits} visit{s}, {self._total_reward:.3f} reward)"
+
+    def __str__(self) -> str:
+        return (
+            f"State: {self.state}\nNumber of visits: {self._num_visits}\n"
+            f"Total reward: {self._total_reward:.3f}"
+        )
+
     @property
-    def is_fully_expanded(self):
+    def is_fully_expanded(self) -> bool:
+        """A node is fully-expanded if it runs out of untried actions."""
         return len(self._untried_actions) == 0
 
     @property
@@ -85,45 +125,33 @@ class Node(Sequence):
         for child in self:
             child.reset_node()
 
-    def __getitem__(
-        self, key: Union[int, str, tuple[str, str], Action, Type[FinishSandwich]]
-    ) -> "Node":
-        if isinstance(key, Action):
-            return self.children[key]
-        if isinstance(key, type) and issubclass(key, FinishSandwich):
-            return self.children[FinishSandwich()]
-        if isinstance(key, tuple):
-            return self.children[SelectBaseRecipe(*key)]
-        if isinstance(key, str):
-            try:
-                return self.children[SelectCondiment(key)]
-            except KeyError:
-                return self.children[SelectFilling(key)]
-        if isinstance(key, int):
-            if key >= len(self):
-                raise IndexError()
-            children = [*self]
-            return children[key]
-        raise KeyError()
-
-    def __iter__(self) -> Iterator["Node"]:
-        return iter(self.children.values())
-
-    def __len__(self) -> int:
-        return len(self.children)
-
-    def __repr__(self) -> str:
-        s = "s" if self._num_visits != 1 else ""
-        return f"State({self._num_visits} visit{s}, {self._total_reward:.3f} reward)"
-
-    def __str__(self) -> str:
-        return (
-            f"State: {self.state}\nNumber of visits: {self._num_visits}\n"
-            f"Total reward: {self._total_reward:.3f}"
-        )
-
 
 class MonteCarloTreeSearch:
+    """An optimizer based on the Monte Carlo tree search (MCTS) algorithm.
+
+    MCTS explores a branching decision landscape. Each decision (an action)
+    offers a reward, which biases the algorithm towards the selection of paths
+    that maximize this reward.
+
+    MCTS consits of four steps: selection, expansion, rollout, and
+    backpropagation.
+
+    1. Selection. Traverse the tree until reaching a leaf node. Trajectory is
+    based on each node's weighted score (upper confidence bounds on trees, UCT).
+    2. Expansion. If the selected leaf node can be expanded, expand it by
+    selecting a random untried action and generating a child.
+    3. Rollout. From the previous node, use the rollout policy to select legal
+    actions until a terminal node is reached.
+    4. Backpropagation. Update the parent nodes with the result from the
+    rollout.
+
+    Args:
+        initial_state: Initial state
+        rollout_policy: Policy used to decide which actions to take
+        exploration_constant: Bias towards exploration of untried actions
+        max_walltime: Maximum time to perform the rollout step
+    """
+
     def __init__(
         self,
         initial_state: State,
@@ -135,6 +163,9 @@ class MonteCarloTreeSearch:
         self.exploration_constant = exploration_constant
         self.max_walltime = max_walltime
         self.root = Node(initial_state)
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__
 
     def rollout(self, node: Node) -> float:
         """Simulate a game until there is an outcome."""
@@ -189,6 +220,3 @@ class MonteCarloTreeSearch:
         if len(best_children) > 1:
             return random.choice(best_children)
         return best_children[0]
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__

@@ -27,6 +27,8 @@ IS_HERBA_MYSTICA = attrgetter("is_herba_mystica")
 
 
 class State(metaclass=ABCMeta):
+    """A transitory description of an environment (e.g., a sandwich recipe)"""
+
     @property
     @abstractmethod
     def is_terminal(self) -> bool:
@@ -46,6 +48,8 @@ class State(metaclass=ABCMeta):
 
 
 class Sandwich(Recipe, State):
+    """A recipe in the making"""
+
     def __init__(self, targets: EffectList) -> None:
         super().__init__([], [])
         if len(targets) != 3:
@@ -58,6 +62,8 @@ class Sandwich(Recipe, State):
 
     @property
     def is_finished(self) -> bool:
+        """Whether this recipe has been marked as finished and will not receive
+        any additional ingredients"""
         return self._is_finished
 
     @is_finished.setter
@@ -66,6 +72,8 @@ class Sandwich(Recipe, State):
 
     @property
     def is_terminal(self) -> bool:
+        """Whether this recipe is finished or it has no more room for any
+        additional ingredient"""
         return self.is_finished or (
             len(self.fillings) == 6 and len(self.condiments) == 4
         )
@@ -122,6 +130,9 @@ class Sandwich(Recipe, State):
         return possible_actions
 
     def get_reward(self) -> float:
+        """Calculate the score of this recipe by comparing its calculated
+        effects with the desired effects. Although only effect Power and Type
+        are matched, effect levels are used as bonus multipliers."""
         if self.is_legal:
             effects = self.effects
             levels = effects.remove_levels()  # do not compare levels
@@ -133,6 +144,14 @@ class Sandwich(Recipe, State):
         return 0
 
     def move(self, action: Action) -> "State":
+        """Generate a new state (recipe) by applying an action to the current
+        one. Actions can either mark the recipe as finished or add ingredients
+        to the list of ingredients.
+
+        Returns:
+            A copy of the recipe that is either marked as finished or has
+            additional ingredients
+        """
         next_state = deepcopy(self)
         if isinstance(action, FinishSandwich):
             next_state.is_finished = True

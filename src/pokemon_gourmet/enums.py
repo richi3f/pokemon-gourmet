@@ -9,6 +9,8 @@ class _ReprEnum(Enum):
 
 
 class Flavor(_ReprEnum):
+    """Flavor of an ingredient or a sandwich"""
+
     SWEET = auto()
     SALTY = auto()
     SOUR = auto()
@@ -17,6 +19,8 @@ class Flavor(_ReprEnum):
 
 
 class Power(_ReprEnum):
+    """Power of an ingredient, a sandwich, or an effect"""
+
     EGG = auto()
     CATCHING = auto()
     EXP_POINT = auto()
@@ -30,6 +34,8 @@ class Power(_ReprEnum):
 
 
 class Type(_ReprEnum):
+    """A Pokémon Type associated to an ingredient, a sandwich, or an effect"""
+
     NORMAL = auto()
     FIGHTING = auto()
     FLYING = auto()

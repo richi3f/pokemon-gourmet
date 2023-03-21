@@ -15,7 +15,7 @@ Conda or similar). This package requires Python 3.9.
 
 ## How to run
 
-To get a sandwich recipe from the command line, run the `gourmet`command.
+To get sandwich recipes from the command line, run the `gourmet`command.
 
 ```bash
 gourmet title,fairy encounter,fairy humungo,ghost
@@ -34,10 +34,10 @@ desired_effects = [
   ("HUMUNGO", "GHOST"),
  ]
 suggester = RecipeGenerator(desired_effects, 10)
-recipes = [recipe for recipe in suggester]
+suggestions = [recipe for recipes in suggester for recipe in recipes]
 ```
 
-Pass effects as pairs of a Power and a Pokémon Type. These can be
+Write effects as pairs of an effect Power and a Pokémon Type. These can be
 case-insensitive strings or enums from the `pokemon_gourmet.enums` module. If
 the Power is Egg Power, set Pokémon Type to `None`.
 
@@ -62,18 +62,17 @@ learning algorithm known as
 condiments. In total, there's 58 ingredients to combine, leading to an
 intractable amount of combinations (probably more than 30 quadrillion recipes!).
 
-:sandwich: Cue MCTS, an exploratory algorithm that can smartly traverse through
-a landscape of branching decision landscape, weigh each decision, and select
-the most profitable decision path. In the context of sandwich making, a decision
-refers to adding an ingredient to a sandwich's recipe. Each decision is scored
-based on how it affects the sandwich's effects and its match to the user-input
-desired effects. The most profitable decision path then reads like a sandwich
-recipe .
+:sandwich: Cue MCTS, an exploratory algorithm that can traverse a landscape of
+branching decisions, weigh each decision, and select the most profitable
+decision path. In the context of sandwich making, a decision refers to adding
+an ingredient to a sandwich's recipe. Each decision is scored based on how it
+affects the sandwich's effects and its match to the user-input desired effects.
+The most profitable decision path then reads like a sandwich recipe. Yum!
 
 ### Configuration
 
-- `num_iter` (`n` in CLI) - number of times to explore the decision tree. Each
-  iteration may open new paths.
+- `num_iter` (`n` in CLI) - number of times to explore the search tree. Each
+  iteration may adventure into new paths.
 
 - `exploration_constant` (`c` in CLI) - bias of the algorithm towards
   exploration of less tried ingredients.
@@ -95,7 +94,7 @@ recipe .
 
 #### Examples:
 
-Attempt to generate a recipe with an exploration constant of 5 and only 100 ms
+Attempt to generate recipes with an exploration constant of 5 and only 100 ms
 to select each ingredient (note this is a very short time, it may not find a
 solution).
 
@@ -103,7 +102,7 @@ solution).
 gourmet title,fairy encounter,fairy humungo,ghost -c 5 -w 100
 ```
 
-Attempt to generate a recipe using the short recipe rollout policy with a 50%
+Attempt to generate recipes using the early stopping rollout policy with a 50%
 chance to finish the recipe early.
 
 ```bash
@@ -128,7 +127,7 @@ suggester = RecipeGenerator(
     max_walltime=1000,
     rollout_policy=rollout_policy,
 )
-recipes = [recipe for recipe in suggester]
+suggestions = [recipe for recipes in suggester for recipe in recipes]
 ```
 
 ## Remarks
@@ -140,13 +139,17 @@ run if you ask, for instance, for a sandwich that has Sparkling Power but no
 Title Power. However, other combinations might be impossible and the algorithm
 will still run and try to find the closest match (i.e., either one or two
 matching effects).</dd>
-<dt>Why did it not find any recipe matching my target effects?</dt>
-<dd>The search process is stochastic, so there is no guarantee that two searches
-will have the same results. For this reason, I recommend setting the
-<code>num_iter</code> argument to 10 or more. This should result in at least a
-couple of recipes that match your target effects. Also, increase the
-<code>max_walltime</code> to give time to the searcher to explore the decision
-landscape.</dd>
+<dt>Why am I getting different results every time?</dt>
+<dd>The search process is stochastic, so there is no guarantee that two
+searches will render the same results.</dd>
+<dt>What are some of the limitations of this tool?</dt>
+<dd>Currently, it only generates three-star sandwiches (i.e., it assumes no
+ingredient will fall out of the sandwich).</dd>
+<dd>Additionally, users can only input desired effect Power and Type. However,
+the algorithm will still try to maximize the levels of each Power.</dd>
+<dt>Are there any improvements planned for this project?</dt>
+<dd>Yes. I'm looking into a better reward function (i.e., how recipes are
+scored) and the possibility of specifying Power level.</dd>
 </dl>
 
 ## Contribute

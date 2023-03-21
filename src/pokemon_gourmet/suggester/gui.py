@@ -256,7 +256,7 @@ def main() -> None:
     with st.expander("Advanced options"):
         num_results = int(
             st.number_input(
-                "Number of results",
+                "Number of displayed results",
                 value=10,
                 min_value=1,
                 max_value=100,
@@ -267,7 +267,7 @@ def main() -> None:
             st.number_input(
                 "Number of iterations",
                 value=10,
-                help="Number of times to explore the decision tree",
+                help="Number of times to explore the search tree",
             )
         )
         exploration_constant = st.number_input(
@@ -319,15 +319,18 @@ def main() -> None:
             placeholder = st.empty()
 
             recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
-            for i, recipes in enumerate(recipe_gen):
+            recipes = []
+            for i, new_recipes in enumerate(recipe_gen):
                 pbar_val = (i + 1) / num_iter
                 pbar.progress(pbar_val, f"Operation in progress. ({i+1}/{num_iter})")
 
-                if not recipes:
+                if not new_recipes:
                     continue
+                else:
+                    recipes.extend(new_recipes)
 
                 rows = []
-                for recipe in set(recipes):
+                for recipe in recipes:
                     effects_html = style_effects(recipe.effects)
                     ingredients_html = style_ingredients(
                         recipe.condiments, recipe.fillings
@@ -356,8 +359,6 @@ def main() -> None:
                         "Fillings",
                     ],
                 )
-                num_recipes = df.shape[0]
-                df.drop_duplicates(["Ingredients"], inplace=True)
                 df.sort_values(
                     ["Score", "Condiments", "Fillings"],
                     ascending=[False, True, True],
@@ -371,14 +372,11 @@ def main() -> None:
                     .hide(["Score", "Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )
-                num_dups = num_recipes - df.shape[0]
-                s = "s" if num_dups != 1 else ""
+                num_recipes = df.shape[0]
                 with placeholder.container():
                     st.subheader(":sandwich: Sandwich recipes")
                     st.markdown(df_html, unsafe_allow_html=True)
-                    st.caption(
-                        f"Total recipes found: {num_recipes} ({num_dups} duplicate{s})"
-                    )
+                    st.caption(f"Total recipes found: {num_recipes}")
 
 
 if __name__ == "__main__":

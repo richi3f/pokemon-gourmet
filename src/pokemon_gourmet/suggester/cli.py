@@ -90,7 +90,7 @@ def format_ingredients(ingredients: list[Ingredient]) -> str:
     "--num-iter",
     default=10,
     type=int,
-    help="Number of times to explore the decision tree",
+    help="Number of times to explore the search tree",
 )
 @click.option(
     "-r",
