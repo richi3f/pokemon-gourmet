@@ -16,7 +16,7 @@ from pokemon_gourmet.suggester.mcts.policies import (
     RolloutPolicy,
     random_rollout_policy,
 )
-from pokemon_gourmet.suggester.mcts.state import State
+from pokemon_gourmet.suggester.mcts.state import State, recipe_manager
 
 FilterFunction = Callable[["Node"], bool]
 
@@ -102,6 +102,7 @@ class Node(Sequence):
         idx = random.randint(0, len(self._untried_actions) - 1)
         action = self._untried_actions.pop(idx)
         next_state = self.state.move(action)
+        recipe_manager.add(next_state)
         child_node = Node(next_state, self, action)
         self.children[action] = child_node
         return child_node
@@ -150,19 +151,25 @@ class MonteCarloTreeSearch:
         rollout_policy: Policy used to decide which actions to take
         exploration_constant: Bias towards exploration of untried actions
         max_walltime: Maximum time to perform the rollout step
+        seed: Seed for the random number generator
     """
 
     def __init__(
         self,
         initial_state: State,
+        *,
         rollout_policy: RolloutPolicy = random_rollout_policy,
         exploration_constant: float = 1 / sqrt(2),
         max_walltime: int = 1000,
+        seed: Optional[int] = None,
     ) -> None:
         self.rollout_policy = rollout_policy
         self.exploration_constant = exploration_constant
         self.max_walltime = max_walltime
         self.root = Node(initial_state)
+        recipe_manager.clear()
+        if seed is not None:
+            random.seed(seed)
 
     def __repr__(self) -> str:
         return self.__class__.__name__
