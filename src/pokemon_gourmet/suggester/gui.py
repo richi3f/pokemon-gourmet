@@ -5,7 +5,8 @@ from functools import partial
 from math import sqrt
 from numbers import Number
 from pathlib import Path
-from typing import Optional, cast
+from time import time
+from typing import Callable, Optional, cast
 
 import pandas as pd
 import streamlit as st
@@ -204,6 +205,10 @@ def style_ingredients(condiments: list[Condiment], fillings: list[Filling]) -> s
     return html
 
 
+def format_score(score: float) -> str:
+    return f"{max(1.0, score / 100):.3f}"
+
+
 def main() -> None:
     st.set_page_config("Pokémon Gourmet: a sandwich recipe suggester", ":sandwich:")
 
@@ -268,6 +273,7 @@ def main() -> None:
                 "Number of iterations",
                 value=10,
                 help="Number of times to explore the search tree",
+                min_value=1,
             )
         )
         exploration_constant = st.number_input(
@@ -307,6 +313,7 @@ def main() -> None:
         except (e.UnexpectedPower, e.UnexpectedType) as exception:
             st.error(str(exception))
         else:
+            start_time = time()
             pbar_text = "Operation in progress. Please wait."
             pbar = st.progress(0.0, pbar_text)
 
@@ -321,8 +328,20 @@ def main() -> None:
             recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
             recipes = []
             for i, new_recipes in enumerate(recipe_gen):
+                elapsed_time = time() - start_time
+                min_, s = divmod(round(elapsed_time), 60)
+                h, _ = divmod(min_, 60)
+                min_ = f"{min_:.0f} min " if min_ > 0 else ""
+                h = f"{h:.0f} h " if h > 0 else ""
+
                 pbar_val = (i + 1) / num_iter
-                pbar.progress(pbar_val, f"Operation in progress. ({i+1}/{num_iter})")
+                pbar.progress(
+                    pbar_val,
+                    (
+                        f"Operation in progress ({i+1:,}/{num_iter:,}). "
+                        f"Elapsed time: {h}{min_}{s:.1f} s"
+                    ),
+                )
 
                 if not new_recipes:
                     continue
@@ -369,14 +388,15 @@ def main() -> None:
                 df_html = (
                     df.head(num_results)
                     .style.set_table_styles(TABLE_STYLES)
-                    .hide(["Score", "Condiments", "Fillings"], axis="columns")
+                    .format(formatter={"Score": cast(Callable, format_score)})
+                    .hide(["Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )
                 num_recipes = df.shape[0]
                 with placeholder.container():
                     st.subheader(":sandwich: Sandwich recipes")
                     st.markdown(df_html, unsafe_allow_html=True)
-                    st.caption(f"Total recipes found: {num_recipes}")
+                    st.caption(f"Total recipes found: {num_recipes:,}")
 
 
 if __name__ == "__main__":
