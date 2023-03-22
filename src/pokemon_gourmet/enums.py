@@ -3,12 +3,12 @@ __all__ = ["Flavor", "Power", "Type"]
 from enum import Enum, auto
 
 
-class _ReprEnum(Enum):
+class _Attribute(Enum):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
 
 
-class Flavor(_ReprEnum):
+class Flavor(_Attribute):
     """Flavor of an ingredient or a sandwich"""
 
     SWEET = auto()
@@ -18,7 +18,7 @@ class Flavor(_ReprEnum):
     HOT = auto()
 
 
-class Power(_ReprEnum):
+class Power(_Attribute):
     """Power of an ingredient, a sandwich, or an effect"""
 
     EGG = auto()
@@ -33,7 +33,7 @@ class Power(_ReprEnum):
     ENCOUNTER = auto()
 
 
-class Type(_ReprEnum):
+class Type(_Attribute):
     """A Pokémon Type associated to an ingredient, a sandwich, or an effect"""
 
     NORMAL = auto()

@@ -3,8 +3,9 @@ __all__ = ["calculate_effects"]
 from collections import defaultdict
 from typing import TYPE_CHECKING, Literal, TypeVar, Union, overload
 
-from pokemon_gourmet.enums import Flavor, Power, Type, _ReprEnum
+from pokemon_gourmet.enums import Flavor, Power, Type, _Attribute
 from pokemon_gourmet.sandwich.effect import EffectTuple
+from pokemon_gourmet.singleton import Singleton
 
 if TYPE_CHECKING:
     from pokemon_gourmet.sandwich.recipe import Recipe
@@ -34,10 +35,10 @@ FLAVOR_COMBO_BONUS: dict[tuple[Flavor, Flavor], Power] = {
 
 AttributeDict = Union[dict[Flavor, int], dict[Power, int], dict[Type, int]]
 AttributeName = Literal["flavor", "power", "pokemon_type", "type"]
-AttributeVar = TypeVar("AttributeVar", bound=_ReprEnum)
+AttributeT = TypeVar("AttributeT", bound=_Attribute)
 
 
-class EffectCalculator:
+class EffectCalculator(metaclass=Singleton):
     """Calculate the effects of a recipe, based on the formula derived
     by @cecilbowen.
 
@@ -57,11 +58,11 @@ class EffectCalculator:
         return self.compute_effects()
 
     @staticmethod
-    def sort_key(attr_sum: tuple[AttributeVar, int]) -> tuple[int, int]:
+    def sort_key(attr_sum: tuple[AttributeT, int]) -> tuple[int, int]:
         return (attr_sum[1], -attr_sum[0].value)
 
     @staticmethod
-    def sort_attr_sum(attr_sum: dict[AttributeVar, int]) -> dict[AttributeVar, int]:
+    def sort_attr_sum(attr_sum: dict[AttributeT, int]) -> dict[AttributeT, int]:
         sorted_attr_sum = sorted(
             attr_sum.items(), key=EffectCalculator.sort_key, reverse=True
         )
