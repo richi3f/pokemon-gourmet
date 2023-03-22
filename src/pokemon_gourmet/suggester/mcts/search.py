@@ -3,7 +3,16 @@ __all__ = ["MonteCarloTreeSearch"]
 import random
 from math import log, sqrt
 from time import time
-from typing import Callable, Iterator, Optional, Sequence, Type, Union
+from typing import (
+    Callable,
+    Hashable,
+    Iterator,
+    Optional,
+    Sequence,
+    Type,
+    Union,
+    overload,
+)
 
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
@@ -16,13 +25,21 @@ from pokemon_gourmet.suggester.mcts.policies import (
     RolloutPolicy,
     random_rollout_policy,
 )
-from pokemon_gourmet.suggester.mcts.state import State, recipe_manager
+from pokemon_gourmet.suggester.mcts.state import State, StateManager
 
 FilterFunction = Callable[["Node"], bool]
 
 
 class Node(Sequence):
     """A node from a search tree"""
+
+    @overload
+    def __init__(self, state: State):
+        ...
+
+    @overload
+    def __init__(self, state: State, parent: "Node", parent_action: Action):
+        ...
 
     def __init__(
         self,
@@ -67,7 +84,8 @@ class Node(Sequence):
 
     def __repr__(self) -> str:
         s = "s" if self._num_visits != 1 else ""
-        return f"State({self._num_visits} visit{s}, {self._total_reward:.3f} reward)"
+        n = "Root n" if self.parent is None else "n"
+        return f"{n}ode({self._num_visits} visit{s}, {self._total_reward:.3f} reward)"
 
     def __str__(self) -> str:
         return (
@@ -102,7 +120,6 @@ class Node(Sequence):
         idx = random.randint(0, len(self._untried_actions) - 1)
         action = self._untried_actions.pop(idx)
         next_state = self.state.move(action)
-        recipe_manager.add(next_state)
         child_node = Node(next_state, self, action)
         self.children[action] = child_node
         return child_node
@@ -157,6 +174,7 @@ class MonteCarloTreeSearch:
     def __init__(
         self,
         initial_state: State,
+        state_manager: StateManager[State, Hashable],
         *,
         rollout_policy: RolloutPolicy = random_rollout_policy,
         exploration_constant: float = 1 / sqrt(2),
@@ -167,7 +185,8 @@ class MonteCarloTreeSearch:
         self.exploration_constant = exploration_constant
         self.max_walltime = max_walltime
         self.root = Node(initial_state)
-        recipe_manager.clear()
+        self.state_manager = state_manager
+        self.state_manager.clear()
         if seed is not None:
             random.seed(seed)
 
@@ -180,15 +199,19 @@ class MonteCarloTreeSearch:
         while not current_rollout_state.is_terminal:
             action = self.rollout_policy(current_rollout_state)
             current_rollout_state = current_rollout_state.move(action)
-        return current_rollout_state.get_reward()
+        return current_rollout_state.reward
 
     def select_node(self, current_node: Node) -> Node:
-        """Select node to rollout."""
+        """Select node to rollout. If node is fully expanded, select a child
+        according to UCT. Otherwise, expand current node (i.e., create a child
+        based on a random untried action)."""
         while not current_node.is_terminal_node:
             if current_node.is_fully_expanded:
                 current_node = self.select_child(current_node)
             else:
-                return current_node.expand()
+                child = current_node.expand()
+                self.state_manager.add(child.state)
+                return child
         return current_node
 
     def select_child(self, parent: Node) -> Node:

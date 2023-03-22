@@ -1,16 +1,17 @@
-__all__ = ["Sandwich", "State"]
+__all__ = ["Sandwich", "State", "recipe_manager"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from itertools import product
 from math import log2
-from typing import Any, Iterator, TypeVar, Union
+from typing import Generic, Hashable, Iterator, TypeVar, Union, cast
 
 from pokemon_gourmet.enums import Power
 from pokemon_gourmet.sandwich.effect import EffectList
 from pokemon_gourmet.sandwich.ingredient import Ingredient
 from pokemon_gourmet.sandwich.ingredient_data import CONDIMENTS, FILLINGS
 from pokemon_gourmet.sandwich.recipe import Recipe, RecipeTuple
+from pokemon_gourmet.singleton import Singleton
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
@@ -21,7 +22,9 @@ from pokemon_gourmet.suggester.mcts.action import (
 
 REWARD_GROWTH_FACTOR = log2(300) / 6
 
-S = TypeVar("S", bound="State")
+StateT = TypeVar("StateT", bound="State")
+State_co = TypeVar("State_co", bound="State", covariant=True)
+T_co = TypeVar("T_co", bound=Hashable, covariant=True)
 
 
 class State(metaclass=ABCMeta):
@@ -41,11 +44,12 @@ class State(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_reward(self) -> float:
+    def move(self: StateT, action: Action) -> StateT:
         ...
 
+    @property
     @abstractmethod
-    def move(self: S, action: Action) -> S:
+    def reward(self) -> float:
         ...
 
 
@@ -61,19 +65,32 @@ class Sandwich(Recipe, State):
     of condiments and fillings.
     """
 
-    def __init__(self, targets: EffectList) -> None:
+    def __init__(
+        self,
+        targets: EffectList,
+        min_fillings: int = 1,
+        max_fillings: int = 6,
+    ) -> None:
         super().__init__([], [])
         if len(targets) != 3:
             raise ValueError("Target effects should be exactly three.")
         self.targets = targets
+        if max_fillings < min_fillings:
+            raise ValueError(
+                "The maximum number of fillings cannot be less than the mininum"
+                "number of fillings"
+            )
+        self.min_fillings = max(1, min_fillings)
+        self.max_fillings = min(6, max_fillings)
         self._is_finished = False
+        self._reward = None
 
     def __bool__(self) -> bool:
-        return self.get_reward() >= 1
+        return self.reward >= 1
 
     def __lt__(self, other: "Sandwich") -> bool:
-        rhs = (self.get_reward(), -len(self.condiments), -len(self.fillings))
-        lhs = (other.get_reward(), -len(other.condiments), -len(other.fillings))
+        rhs = (self.reward, -len(self.condiments), -len(self.fillings))
+        lhs = (other.reward, -len(other.condiments), -len(other.fillings))
         return rhs < lhs
 
     @property
@@ -91,10 +108,29 @@ class Sandwich(Recipe, State):
         """Whether this recipe is finished or it has no more room for any
         additional ingredient"""
         return self.is_finished or (
-            len(self.fillings) == 6 and len(self.condiments) == 4
+            len(self.fillings) == self.max_fillings and len(self.condiments) == 4
         )
 
-    def exists(self, ingredient: Ingredient) -> bool:
+    @property
+    def reward(self) -> float:
+        """The recipe's score:
+
+        - 0.000 - if it does not match any target effect
+        - 0.333 - if it matches one target effect
+        - 0.667 - if it matches two target effects
+        - 1.000 - if it matches all three target effects at Lv. 1
+        - 17.32 - if it matches all three target effects at Lv. 2
+        - 300.0 - if it matches all three target effects at Lv. 3
+        """
+        if self._reward is None:
+            self._reward = self.get_reward()
+        return self._reward
+
+    def add_ingredient(self, ingredient: Ingredient) -> None:
+        self._reward = None  # Reset reward
+        return super().add_ingredient(ingredient)
+
+    def exists_with(self, ingredient: Ingredient) -> bool:
         """Check whether adding an ingredient would result in an existing
         recipe."""
         ingredient_names = [ingredient.name]
@@ -122,7 +158,7 @@ class Sandwich(Recipe, State):
         """
         possible_actions = []
         if len(self) == 0:
-
+            # Force base recipe to include Herba Mystica if Title/Sparkling Power
             def validate_condiment(condiment: Ingredient) -> bool:
                 return not (
                     condiment.is_herba_mystica
@@ -132,7 +168,6 @@ class Sandwich(Recipe, State):
                     )
                 )
 
-            # Force base recipe to include Herba Mystica if Title/Sparkling Power
             valid_condiments = filter(validate_condiment, CONDIMENTS)
             for condiment, filling in product(valid_condiments, FILLINGS):
                 possible_actions.append(SelectBaseRecipe(condiment.name, filling.name))
@@ -143,21 +178,26 @@ class Sandwich(Recipe, State):
                     if ingredient.is_herba_mystica:
                         possible_actions.append(SelectCondiment(ingredient.name))
             else:
-                possible_actions.append(FinishSandwich())
-                if len(self.condiments) < 4:
-                    # Exclude Herba Mystica from recipe
-                    # Skip condiment if it would render an existing recipe
-                    for ingredient in CONDIMENTS:
-                        if ingredient.is_herba_mystica or self.exists(ingredient):
-                            continue
-                        possible_actions.append(SelectCondiment(ingredient.name))
-
-                if len(self.fillings) < 6:
+                # Add fillings if there is room
+                if len(self.fillings) < self.max_fillings:
                     for ingredient in FILLINGS:
-                        # Skip ingredient if it would render an existing recipe
-                        if self.exists(ingredient):
+                        # Skip ingredients that generate redundant recipes
+                        if self.exists_with(ingredient):
                             continue
                         possible_actions.append(SelectFilling(ingredient.name))
+
+                # If cannot add more fillings, make it possible to stop
+                if len(possible_actions) == 0:
+                    possible_actions.append(FinishSandwich())
+
+                # Only add condiments if # min fillings have been added first
+                if len(self.fillings) >= self.min_fillings and len(self.condiments) < 4:
+                    for ingredient in CONDIMENTS:
+                        # Exclude Herba Mystica from recipe
+                        # Skip ingredients that generate redundant recipes
+                        if ingredient.is_herba_mystica or self.exists_with(ingredient):
+                            continue
+                        possible_actions.append(SelectCondiment(ingredient.name))
         return possible_actions
 
     def get_reward(self) -> float:
@@ -195,29 +235,14 @@ class Sandwich(Recipe, State):
         return next_state
 
 
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class RecipeManager(metaclass=Singleton):
-    """Manage generated recipes by keeping a list of unique entries"""
-
+class StateManager(Generic[State_co, T_co]):
     def __init__(self) -> None:
-        self._states: set[RecipeTuple] = set()
+        self._states: set[T_co] = set()
 
-    def __contains__(self, item: Union[Sandwich, RecipeTuple]) -> bool:
-        if isinstance(item, Sandwich):
-            item = item.astuple()
-        if isinstance(item, tuple):
-            return item in self._states
-        raise TypeError()
+    def __contains__(self, item: Union[State_co, T_co]) -> bool:
+        return item in self._states
 
-    def __iter__(self) -> Iterator[RecipeTuple]:
+    def __iter__(self) -> Iterator[T_co]:
         return iter(self._states)
 
     def __len__(self) -> int:
@@ -227,16 +252,31 @@ class RecipeManager(metaclass=Singleton):
         s = "s" if len(self) != 1 else ""
         return f"{self.__class__.__name__}({len(self)} state{s})"
 
-    def add(self, item: State) -> None:
+    def add(self, item: Union[State_co, T_co]) -> None:
+        """Add a recipe (as a tuple) to the recipe manager."""
+        return self._states.add(cast(T_co, item))
+
+    def clear(self) -> None:
+        """Remove all items from the recipe manager."""
+        self._states.clear()
+
+
+class RecipeManager(StateManager[Sandwich, RecipeTuple], metaclass=Singleton):
+    """Manage generated recipes by keeping a list of unique entries"""
+
+    def __contains__(self, item: Union[Sandwich, RecipeTuple]) -> bool:
+        if isinstance(item, Sandwich):
+            item = item.astuple()
+        if isinstance(item, tuple):
+            return item in self._states
+        raise TypeError()
+
+    def add(self, item: Sandwich) -> None:
         """Add a recipe (as a tuple) to the recipe manager."""
         if isinstance(item, Sandwich):
             tup = item.astuple()
             return self._states.add(tup)
         raise TypeError(f"Received {type(item)}, should be `State`")
-
-    def clear(self) -> None:
-        """Remove all items from the recipe manager."""
-        self._states.clear()
 
 
 recipe_manager = RecipeManager()

@@ -7,7 +7,7 @@ from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
 from pokemon_gourmet.suggester.exceptions import InvalidEffects
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
-from pokemon_gourmet.suggester.mcts.state import Sandwich
+from pokemon_gourmet.suggester.mcts.state import RecipeManager, Sandwich
 
 CouldBeTarget = Union[Effect, EffectTuple, Iterable[str]]
 
@@ -45,9 +45,13 @@ def validate_targets(targets: EffectList) -> None:
     Raises:
         InvalidEffects:
             If sandwich has two or more effects with the same type of Power.
+
             If Sparkling Power and Title Power are not paired.
+
             If Sparkling Power is present and not all Types are the same.
+
             If there is a typeless effect that is not Egg Power.
+
             If Egg Power is not typeless.
     """
     if len(targets.powers) != len(targets):
@@ -88,7 +92,9 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
         self.num_iter = num_iter
         self.mcts_kwargs = mcts_kwargs
         initial_state = Sandwich(self.targets)
-        self.mcts = MonteCarloTreeSearch(initial_state, **self.mcts_kwargs)
+        self.mcts = MonteCarloTreeSearch(
+            initial_state, RecipeManager(), **self.mcts_kwargs
+        )
         self.saved_results = set()
 
     def _search(self) -> None:

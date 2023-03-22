@@ -4,7 +4,6 @@ import inspect
 from collections import Counter
 from functools import partial
 from math import sqrt
-from operator import methodcaller
 
 import click
 
@@ -141,12 +140,12 @@ def main(
             continue
         unique_recipes.update(recipes)
 
-    for recipe in sorted(unique_recipes, key=methodcaller("get_reward"), reverse=True):
+    for recipe in sorted(unique_recipes, reverse=True):
         filling_names = format_ingredients(getattr(recipe, "fillings"))
         condiment_names = format_ingredients(getattr(recipe, "condiments"))
 
         print(
-            f"{recipe}\nMatch: {min(1.0, recipe.get_reward()):.3f}\n"
+            f"{recipe}\nMatch: {min(1.0, recipe.reward):.3f}\n"
             f"Fillings:{filling_names}\nCondiments:{condiment_names}"
         )
 

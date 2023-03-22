@@ -21,6 +21,7 @@ from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
+from pokemon_gourmet.suggester.mcts.state import Sandwich
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
@@ -101,7 +102,7 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
     func = p.ROLLOUT_POLICIES[func_name]
     params = inspect.signature(func).parameters
     if len(params) > 1:
-        # a rollout policy that takes additional parameters
+        # A rollout policy that takes additional parameters
         func_doc = func.__doc__
         if func_doc is not None:
             func_doc = Docstring(func_doc, parser=Parser.google)
@@ -124,7 +125,7 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
                     label, value=param.default, help=desc
                 )
             else:
-                raise ValueError("Unsupported parameter type.")
+                raise TypeError("Unsupported parameter type.")
         func = partial(func, **rollout_policy_kwargs)
     return func
 
@@ -326,7 +327,7 @@ def main() -> None:
             placeholder = st.empty()
 
             recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
-            recipes = []
+            recipes: list[Sandwich] = []
             for i, new_recipes in enumerate(recipe_gen):
                 elapsed_time = time() - start_time
                 min_, s = divmod(round(elapsed_time), 60)
@@ -354,7 +355,7 @@ def main() -> None:
                     ingredients_html = style_ingredients(
                         recipe.condiments, recipe.fillings
                     )
-                    score = recipe.get_reward()
+                    score = recipe.reward
                     num_condiments = len(recipe.condiments)
                     num_fillings = len(recipe.fillings)
 
