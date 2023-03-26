@@ -269,23 +269,35 @@ def main() -> None:
                 help="Number of results to display",
             )
         )
+        min_fillings, max_fillings = st.slider(
+            "Number of fillings",
+            value=(1, 6),
+            min_value=1,
+            max_value=6,
+            help=(
+                "Number of fillings in the sandwich recipe (note some recipes "
+                "might be impossible to make with a limited number of fillings)"
+            ),
+        )
         num_iter = int(
             st.number_input(
                 "Number of iterations",
                 value=10,
-                help="Number of times to explore the search tree",
                 min_value=1,
+                help="Number of times to explore the search tree",
             )
         )
         exploration_constant = st.number_input(
             "Exploration constant",
             value=1.0,
+            min_value=0.0,
             step=0.1,
             help="Bias of the algorithm towards exploration of less tried ingredients",
         )
         max_walltime = st.number_input(
             "Max. decision time (ms)",
             value=1000,
+            min_value=100,
             step=100,
             help=(
                 "Maximum time (in ms) the algorithm has to choose an ingredient, "
@@ -326,7 +338,9 @@ def main() -> None:
 
             placeholder = st.empty()
 
-            recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
+            recipe_gen = RecipeGenerator(
+                targets, num_iter, min_fillings, max_fillings, **mcts_kwargs
+            )
             recipes: list[Sandwich] = []
             for i, new_recipes in enumerate(recipe_gen):
                 elapsed_time = time() - start_time
@@ -350,7 +364,10 @@ def main() -> None:
                     recipes.extend(new_recipes)
 
                 rows = []
-                for recipe in recipes:
+                for i, recipe in enumerate(sorted(recipes, reverse=True)):
+                    if i == num_results:
+                        break
+
                     effects_html = style_effects(recipe.effects)
                     ingredients_html = style_ingredients(
                         recipe.condiments, recipe.fillings
@@ -379,21 +396,15 @@ def main() -> None:
                         "Fillings",
                     ],
                 )
-                df.sort_values(
-                    ["Score", "Condiments", "Fillings"],
-                    ascending=[False, True, True],
-                    inplace=True,
-                )
                 df.reset_index(drop=True, inplace=True)
                 df.index += 1
                 df_html = (
-                    df.head(num_results)
-                    .style.set_table_styles(TABLE_STYLES)
+                    df.style.set_table_styles(TABLE_STYLES)
                     .format(formatter={"Score": cast(Callable, format_score)})
                     .hide(["Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )
-                num_recipes = df.shape[0]
+                num_recipes = len(recipes)
                 with placeholder.container():
                     st.subheader(":sandwich: Sandwich recipes")
                     st.markdown(df_html, unsafe_allow_html=True)

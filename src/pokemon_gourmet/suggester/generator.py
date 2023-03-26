@@ -81,17 +81,24 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
     Args:
         targets: Desired effects on the output sandwich recipes
         num_iter: Number of times to explore the search tree
+        min_fillings: Minimum number of fillings to include in recipe
+        max_fillings: Maximum number of fillings to include in recipe
     """
 
     def __init__(
-        self, targets: Iterable[CouldBeTarget], num_iter: int, **mcts_kwargs: Any
+        self,
+        targets: Iterable[CouldBeTarget],
+        num_iter: int,
+        min_fillings: int = 1,
+        max_fillings: int = 6,
+        **mcts_kwargs: Any,
     ) -> None:
         self.targets = parse_targets(targets)
         validate_targets(self.targets)
         self.it = 0
         self.num_iter = num_iter
         self.mcts_kwargs = mcts_kwargs
-        initial_state = Sandwich(self.targets)
+        initial_state = Sandwich(self.targets, min_fillings, max_fillings)
         self.mcts = MonteCarloTreeSearch(
             initial_state, RecipeManager(), **self.mcts_kwargs
         )
