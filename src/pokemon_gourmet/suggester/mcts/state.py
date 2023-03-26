@@ -182,7 +182,12 @@ class Sandwich(Recipe, State):
                 if len(self.fillings) < self.max_fillings:
                     for ingredient in FILLINGS:
                         # Skip ingredients that generate redundant recipes
-                        if self.exists_with(ingredient):
+                        # Skip fillings that have reached max number of pieces
+                        if (
+                            self.exists_with(ingredient)
+                            or (ingredient.pieces == 3 and self.count(ingredient) >= 4)
+                            or (ingredient.pieces == 4 and self.count(ingredient) >= 3)
+                        ):
                             continue
                         possible_actions.append(SelectFilling(ingredient.name))
 

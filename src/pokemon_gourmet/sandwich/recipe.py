@@ -68,6 +68,12 @@ class Recipe(Collection, Hashable):
         """Return the sorted list of ingredients as a tuple."""
         return tuple([ingredient.name for ingredient in sorted(self.ingredients)])
 
+    def count(self, ingredient: Ingredient) -> int:
+        """Return the count of the given ingredient."""
+        if ingredient.is_filling:
+            return self.fillings.count(cast(Filling, ingredient))
+        return self.condiments.count(cast(Condiment, ingredient))
+
     def __contains__(self, ingredient: Ingredient) -> bool:
         if ingredient.is_condiment:
             return ingredient in self.condiments
