@@ -15,19 +15,19 @@ def test_membership():
     assert all(type_ in effects for type_ in types)
     assert all(
         power not in effects
-        for power in Power._member_map_.values()
+        for power in Power.__members__.values()
         if power not in powers
     )
     assert all(
         type_ not in effects
-        for type_ in Type._member_map_.values()
+        for type_ in Type.__members__.values()
         if type_ not in types
     )
     # Check power/type/level tuple in effect list
     assert all(tup in effects for tup in effect_tuples)
     assert (Power.RAID, Type.GRASS, 2) not in effects
-    assert all(Effect(*tup) in effects for tup in effect_tuples)
-    assert Effect(Power.RAID, Type.GRASS, 2) not in effects
+    assert all(Effect.from_enums(*tup) in effects for tup in effect_tuples)
+    assert Effect.from_enums(Power.RAID, Type.GRASS, 2) not in effects
 
 
 def test_remove_levels():

@@ -14,6 +14,7 @@ from typing import (
     overload,
 )
 
+from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
     FinishSandwich,
@@ -63,12 +64,14 @@ class Node(Sequence):
         if isinstance(key, type) and issubclass(key, FinishSandwich):
             return self.children[FinishSandwich()]
         if isinstance(key, tuple):
-            return self.children[SelectBaseRecipe(*key)]
+            keys = [ingredient_data.index(name) for name in key]
+            return self.children[SelectBaseRecipe(*keys)]
         if isinstance(key, str):
+            i = ingredient_data.index(key)
             try:
-                return self.children[SelectCondiment(key)]
+                return self.children[SelectCondiment(i)]
             except KeyError:
-                return self.children[SelectFilling(key)]
+                return self.children[SelectFilling(i)]
         if isinstance(key, int):
             if key >= len(self):
                 raise IndexError()

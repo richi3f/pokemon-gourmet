@@ -5,6 +5,7 @@ from typing import Any, Iterable, Iterator, Union, cast
 
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
+from pokemon_gourmet.sandwich.recipe import MAX_FILLINGS
 from pokemon_gourmet.suggester.exceptions import InvalidEffects
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
 from pokemon_gourmet.suggester.mcts.state import RecipeManager, Sandwich
@@ -58,11 +59,11 @@ def validate_targets(targets: EffectList) -> None:
         raise InvalidEffects(
             "A sandwich cannot have two or more effects sharing the same type of Power."
         )
-    have_egg_power = Power.EGG in targets.powers
+    have_egg_power = Power.EGG in targets
     if have_egg_power and (Power.EGG, None) not in targets:
         raise InvalidEffects("Egg Power should be typeless.")
-    if Power.SPARKLING in targets.powers:
-        if Power.TITLE not in targets.powers:
+    if Power.SPARKLING in targets:
+        if Power.TITLE not in targets:
             raise InvalidEffects("Sparkling Power is always paired with Title Power.")
         if len(targets.types) > (1 + have_egg_power):
             raise InvalidEffects(
@@ -90,7 +91,7 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
         targets: Iterable[CouldBeTarget],
         num_iter: int,
         min_fillings: int = 1,
-        max_fillings: int = 6,
+        max_fillings: int = MAX_FILLINGS,
         **mcts_kwargs: Any,
     ) -> None:
         self.targets = parse_targets(targets)

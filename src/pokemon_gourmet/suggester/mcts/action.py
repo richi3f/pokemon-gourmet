@@ -11,7 +11,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pokemon_gourmet.sandwich.ingredient_data import INGREDIENTS
+from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
 
 if TYPE_CHECKING:
     from pokemon_gourmet.suggester.mcts.state import Sandwich, State
@@ -49,55 +49,60 @@ class FinishSandwich(Action):
 class SelectBaseRecipe(Action, Iterable):
     """Select a condiment and a filling to start a recipe with"""
 
-    condiment_name: str
-    filling_name: str
+    condiment_idx: int
+    filling_idx: int
 
     def __call__(self, state: "Sandwich") -> None:
-        for ingredient_name in self:
-            state.add_ingredient(INGREDIENTS[ingredient_name])
+        for ingredient_idx in self:
+            state.add_ingredient(ingredient_idx)
 
     def __eq__(self, other: "SelectBaseRecipe") -> bool:
         return (
             self.__class__ == other.__class__
-            and self.condiment_name == other.condiment_name
-            and self.filling_name == other.filling_name
+            and self.condiment_idx == other.condiment_idx
+            and self.filling_idx == other.filling_idx
         )
 
-    def __iter__(self) -> Iterator[str]:
-        return iter((self.condiment_name, self.filling_name))
+    def __iter__(self) -> Iterator[int]:
+        return iter((self.condiment_idx, self.filling_idx))
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.condiment_name}, {self.filling_name})"
+        condiment = ingredient_data[self.condiment_idx]
+        filling = ingredient_data[self.filling_idx]
+        return f"{self.__class__.__name__}({condiment}, {filling})"
 
 
 @dataclass(unsafe_hash=True)
 class SelectIngredient(Action):
     """Select an ingredient to add to a recipe's list of ingredients"""
 
-    ingredient_name: str
+    ingredient_idx: int
 
     def __call__(self, state: "Sandwich") -> None:
-        state.add_ingredient(INGREDIENTS[self.ingredient_name])
+        state.add_ingredient(self.ingredient_idx)
 
     def __eq__(self, other: "SelectIngredient") -> bool:
         return (
             self.__class__ == other.__class__
-            and self.ingredient_name == other.ingredient_name
+            and self.ingredient_idx == other.ingredient_idx
         )
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.ingredient_name})"
+        ingredient = ingredient_data[self.ingredient_idx]
+        return f"{self.__class__.__name__}({ingredient})"
 
 
 @dataclass(unsafe_hash=True)
 class SelectCondiment(SelectIngredient):
     """Select a condiment to add to a recipe's list of ingredients"""
 
-    ...
+    def __repr__(self) -> str:
+        return super().__repr__()
 
 
 @dataclass(unsafe_hash=True)
 class SelectFilling(SelectIngredient):
     """Select a filling to add to a recipe's list of ingredients"""
 
-    ...
+    def __repr__(self) -> str:
+        return super().__repr__()
