@@ -8,7 +8,7 @@ from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
 from pokemon_gourmet.sandwich.recipe import MAX_FILLINGS
 from pokemon_gourmet.suggester.exceptions import InvalidEffects
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
-from pokemon_gourmet.suggester.mcts.state import RecipeState, RecipeManager
+from pokemon_gourmet.suggester.mcts.state import RecipeManager, RecipeState
 
 CouldBeTarget = Union[Effect, EffectTuple, Iterable[str]]
 
@@ -51,6 +51,8 @@ def validate_targets(targets: EffectList) -> None:
 
             If Sparkling Power is present and not all Types are the same.
 
+            If Sparkling Power is not present and all Types are the same.
+
             If there is a typeless effect that is not Egg Power.
 
             If Egg Power is not typeless.
@@ -69,8 +71,13 @@ def validate_targets(targets: EffectList) -> None:
             raise InvalidEffects(
                 "If Sparkling Power is present, every Type must be the same."
             )
+    elif len(targets) == 3 and not have_egg_power and len(targets.types) == 1:
+        # Only true for single-player
+        raise InvalidEffects(
+            "Sparkling Power is required for all Powers to share Type."
+        )
     if any(
-        effect.pokemon_type is None for effect in targets if effect.power != Power.EGG
+        effect.pokemon_type is None for effect in targets if effect.power == Power.EGG
     ):
         raise InvalidEffects("No effect (other than Egg Power) should be typeless.")
 
