@@ -338,9 +338,14 @@ def main() -> None:
 
             placeholder = st.empty()
 
-            recipe_gen = RecipeGenerator(
-                targets, num_iter, min_fillings, max_fillings, **mcts_kwargs
-            )
+            try:
+                recipe_gen = RecipeGenerator(
+                    targets, num_iter, min_fillings, max_fillings, **mcts_kwargs
+                )
+            except e.InvalidEffects as exception:
+                st.error(str(exception))
+                return
+
             recipes: list[RecipeState] = []
             for i, new_recipes in enumerate(recipe_gen):
                 elapsed_time = time() - start_time
@@ -364,7 +369,7 @@ def main() -> None:
                     recipes.extend(new_recipes)
 
                 rows = []
-                for i, recipe in enumerate(sorted(recipes, reverse=True)):
+                for i, recipe in enumerate(recipes):
                     if i == num_results:
                         break
 
@@ -372,17 +377,14 @@ def main() -> None:
                     ingredients_html = style_ingredients(
                         recipe.condiments, recipe.fillings
                     )
-                    score = recipe.reward
-                    num_condiments = recipe.num_condiments
-                    num_fillings = recipe.num_fillings
-
                     rows.append(
                         (
                             effects_html,
                             ingredients_html,
-                            score,
-                            num_condiments,
-                            num_fillings,
+                            recipe.reward,
+                            -recipe.num_fillings,
+                            -recipe.total_pieces,
+                            -recipe.num_condiments,
                         )
                     )
 
@@ -392,16 +394,19 @@ def main() -> None:
                         "Effects",
                         "Ingredients",
                         "Score",
-                        "Condiments",
                         "Fillings",
+                        "Pieces",
+                        "Condiments",
                     ],
+                ).sort_values(
+                    ["Score", "Fillings", "Pieces", "Condiments"], ascending=False
                 )
                 df.reset_index(drop=True, inplace=True)
                 df.index += 1
                 df_html = (
                     df.style.set_table_styles(TABLE_STYLES)
                     .format(precision=3)
-                    .hide(["Condiments", "Fillings"], axis="columns")
+                    .hide(["Condiments", "Fillings", "Pieces"], axis="columns")
                     .to_html()
                 )
                 num_recipes = len(recipes)
