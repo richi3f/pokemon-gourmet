@@ -3,7 +3,7 @@ __all__ = [
     "FinishSandwich",
     "MonteCarloTreeSearch",
     "ROLLOUT_POLICIES",
-    "Sandwich",
+    "RecipeState",
     "SelectCondiment",
     "SelectFilling",
     "SelectBaseRecipe",
@@ -21,7 +21,7 @@ from pokemon_gourmet.suggester.mcts.action import (
 from pokemon_gourmet.suggester.mcts.policies import ROLLOUT_POLICIES
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
 from pokemon_gourmet.suggester.mcts.state import (
-    Sandwich,
+    RecipeState,
     State,
     recipe_manager,
 )

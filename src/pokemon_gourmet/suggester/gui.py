@@ -22,7 +22,7 @@ from pokemon_gourmet.sandwich.recipe import MAX_CONDIMENTS, MAX_FILLINGS
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
-from pokemon_gourmet.suggester.mcts.state import Sandwich
+from pokemon_gourmet.suggester.mcts.state import RecipeState
 
 POWERS = [""] + Power._member_names_
 TYPES = [""] + Type._member_names_
@@ -341,7 +341,7 @@ def main() -> None:
             recipe_gen = RecipeGenerator(
                 targets, num_iter, min_fillings, max_fillings, **mcts_kwargs
             )
-            recipes: list[Sandwich] = []
+            recipes: list[RecipeState] = []
             for i, new_recipes in enumerate(recipe_gen):
                 elapsed_time = time() - start_time
                 min_, s = divmod(round(elapsed_time), 60)

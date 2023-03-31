@@ -8,7 +8,7 @@ from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
 from pokemon_gourmet.sandwich.recipe import MAX_FILLINGS
 from pokemon_gourmet.suggester.exceptions import InvalidEffects
 from pokemon_gourmet.suggester.mcts.search import MonteCarloTreeSearch
-from pokemon_gourmet.suggester.mcts.state import RecipeManager, Sandwich
+from pokemon_gourmet.suggester.mcts.state import RecipeState, RecipeManager
 
 CouldBeTarget = Union[Effect, EffectTuple, Iterable[str]]
 
@@ -75,7 +75,7 @@ def validate_targets(targets: EffectList) -> None:
         raise InvalidEffects("No effect (other than Egg Power) should be typeless.")
 
 
-class RecipeGenerator(Iterator[list[Sandwich]]):
+class RecipeGenerator(Iterator[list[RecipeState]]):
     """Use Monte Carlo tree search to explore ingredient combinations and
     generate recipes that match the target effects.
 
@@ -99,7 +99,7 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
         self.it = 0
         self.num_iter = num_iter
         self.mcts_kwargs = mcts_kwargs
-        initial_state = Sandwich(self.targets, min_fillings, max_fillings)
+        initial_state = RecipeState(self.targets, min_fillings, max_fillings)
         self.mcts = MonteCarloTreeSearch(
             initial_state, RecipeManager(), **self.mcts_kwargs
         )
@@ -114,7 +114,7 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
             assert node.parent_action is not None
             node.state.move(node.parent_action)
 
-    def __next__(self) -> list[Sandwich]:
+    def __next__(self) -> list[RecipeState]:
         if self.it >= self.num_iter:
             raise StopIteration
         self.it += 1
@@ -126,7 +126,7 @@ class RecipeGenerator(Iterator[list[Sandwich]]):
             if node.state not in self.saved_results
         ]
         self.saved_results.update(states)
-        return cast(list[Sandwich], states)
+        return cast(list[RecipeState], states)
 
     def __iter__(self) -> "RecipeGenerator":
         self.it = 0

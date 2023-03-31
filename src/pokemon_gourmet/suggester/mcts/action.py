@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
 
 if TYPE_CHECKING:
-    from pokemon_gourmet.suggester.mcts.state import Sandwich, State
+    from pokemon_gourmet.suggester.mcts.state import RecipeState, State
 
 
 class Action(metaclass=ABCMeta):
@@ -32,7 +32,7 @@ class Action(metaclass=ABCMeta):
 class FinishSandwich(Action):
     """Finalize a recipe"""
 
-    def __call__(self, state: "Sandwich") -> None:
+    def __call__(self, state: "RecipeState") -> None:
         state.is_finished = True
 
     def __eq__(self, other: "FinishSandwich") -> bool:
@@ -52,7 +52,7 @@ class SelectBaseRecipe(Action, Iterable):
     condiment_idx: int
     filling_idx: int
 
-    def __call__(self, state: "Sandwich") -> None:
+    def __call__(self, state: "RecipeState") -> None:
         for ingredient_idx in self:
             state.add_ingredient(ingredient_idx)
 
@@ -78,7 +78,7 @@ class SelectIngredient(Action):
 
     ingredient_idx: int
 
-    def __call__(self, state: "Sandwich") -> None:
+    def __call__(self, state: "RecipeState") -> None:
         state.add_ingredient(self.ingredient_idx)
 
     def __eq__(self, other: "SelectIngredient") -> bool:

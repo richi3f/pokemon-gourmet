@@ -1,4 +1,4 @@
-__all__ = ["Sandwich", "State", "recipe_manager"]
+__all__ = ["RecipeState", "State", "recipe_manager"]
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
@@ -60,7 +60,7 @@ class State(metaclass=ABCMeta):
         ...
 
 
-class Sandwich(Recipe, State):
+class RecipeState(Recipe, State):
     """A recipe in the making.
 
     This recipe starts with an empty list of ingredients and progressively
@@ -97,7 +97,7 @@ class Sandwich(Recipe, State):
     def __bool__(self) -> bool:
         return bool(self.reward >= 1)
 
-    def __lt__(self, other: "Sandwich") -> bool:
+    def __lt__(self, other: "RecipeState") -> bool:
         rhs = (
             self.reward,
             -self.num_fillings,
@@ -259,7 +259,7 @@ class Sandwich(Recipe, State):
             return base_reward
         return 0
 
-    def move(self, action: Action) -> "Sandwich":
+    def move(self, action: Action) -> "RecipeState":
         """Copy current recipe and generate a new one by doing an action on the
         current recipe (state). Actions can either mark the recipe as finished
         or add ingredients to the list of ingredients.
@@ -298,19 +298,19 @@ class StateManager(Generic[State_co, T_co]):
         self._states.clear()
 
 
-class RecipeManager(StateManager[Sandwich, RecipeTuple], metaclass=Singleton):
+class RecipeManager(StateManager[RecipeState, RecipeTuple], metaclass=Singleton):
     """Manage generated recipes by keeping a list of unique entries"""
 
-    def __contains__(self, item: Union[Sandwich, RecipeTuple]) -> bool:
-        if isinstance(item, Sandwich):
+    def __contains__(self, item: Union[RecipeState, RecipeTuple]) -> bool:
+        if isinstance(item, RecipeState):
             item = item.astuple()
         if isinstance(item, tuple):
             return item in self._states
         raise TypeError()
 
-    def add(self, item: Sandwich) -> None:
+    def add(self, item: RecipeState) -> None:
         """Add a recipe (as a tuple) to the recipe manager."""
-        if isinstance(item, Sandwich):
+        if isinstance(item, RecipeState):
             tup = item.astuple()
             return self._states.add(tup)
         raise TypeError(f"Received {type(item)}, should be `State`")
