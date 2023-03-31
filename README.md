@@ -15,7 +15,7 @@ Conda or similar). This package requires Python 3.9.
 
 ## How to run
 
-To get sandwich recipes from the command line, run the `gourmet`command.
+To get sandwich recipes from the command line, run the `gourmet` command.
 
 ```bash
 gourmet title,fairy encounter,fairy humungo,ghost
@@ -33,7 +33,7 @@ desired_effects = [
   ("ENCOUNTER", "FAIRY"),
   ("HUMUNGO", "GHOST"),
  ]
-suggester = RecipeGenerator(desired_effects, 10)
+suggester = RecipeGenerator(desired_effects)
 suggestions = [recipe for recipes in suggester for recipe in recipes]
 ```
 
@@ -60,12 +60,12 @@ learning algorithm known as
 
 :tomato: :salt: Sandwich recipes consist of up to six fillings and four
 condiments. In total, there's 58 ingredients to combine, leading to an
-intractable amount of combinations (probably more than 30 quadrillion recipes!).
+intractable amount of combinations (probably more than 1 trillion recipes!).
 
 :sandwich: Cue MCTS, an exploratory algorithm that can traverse a landscape of
 branching decisions, weigh each decision, and select the most profitable
 decision path. In the context of sandwich making, a decision refers to adding
-an ingredient to a sandwich's recipe. Each decision is scored based on how it
+an ingredient to a sandwich recipe. Each decision is scored based on how it
 affects the sandwich's effects and its match to the user-input desired effects.
 The most profitable decision path then reads like a sandwich recipe. Yum!
 
@@ -89,7 +89,7 @@ The most profitable decision path then reads like a sandwich recipe. Yum!
   - `early_stopping` - favors short recipes by having a high chance of stopping
     the sandwich recipe at the earliest possibility.
   - `weighted_allocation` - assigns a weight to each ingredient based on the
-    free space in the sandwich. This intends to balance the number of fillings
+    free space in the sandwich. This attempts to balance the number of fillings
     and condiments in the sandwich.
 
 #### Examples:
@@ -103,7 +103,7 @@ gourmet title,fairy encounter,fairy humungo,ghost -c 5 -w 100
 ```
 
 Attempt to generate recipes using the early stopping rollout policy with a 50%
-chance to finish the recipe early.
+chance to finish the recipe at the earliest possible.
 
 ```bash
 gourmet title,bug encounter,bug teensy,water -r early_stopping --stop_prob 0.5
@@ -143,10 +143,15 @@ matching effects).</dd>
 <dd>The search process is stochastic, so there is no guarantee that two
 searches will render the same results.</dd>
 <dt>What are some of the limitations of this tool?</dt>
-<dd>Currently, it only generates three-star sandwiches (i.e., it assumes no
-ingredient will fall out of the sandwich).</dd>
-<dd>Additionally, users can only input desired effect Power and Type. However,
-the algorithm will still try to maximize the levels of each Power.</dd>
+<dd>
+  <ol>
+    <li>It only generates three-star sandwich recipes (i.e., it assumes no
+        ingredient will fall out of the sandwich).</li>
+    <li>Users can only input desired Meal Power and Type. Level cannot be
+        specified, but the algorithm will still try to maximize it.</li>
+    <li>Only works for single-player recipes.</li>
+  </ol>
+</dd>
 </dl>
 
 ## Contribute
