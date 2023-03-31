@@ -7,6 +7,9 @@ class _Attribute(Enum):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
 
+    def __str__(self) -> str:
+        return " ".join(map(str.capitalize, self.name.split("_")))
+
 
 class Flavor(_Attribute):
     """Flavor of an ingredient or a sandwich"""
@@ -31,6 +34,9 @@ class Power(_Attribute):
     HUMUNGO = auto()
     TEENSY = auto()
     ENCOUNTER = auto()
+
+    def __str__(self) -> str:
+        return super().__str__() + " Power"
 
 
 class Type(_Attribute):
