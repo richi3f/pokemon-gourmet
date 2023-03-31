@@ -1,13 +1,13 @@
 from pokemon_gourmet.enums import Power, Type
 from pokemon_gourmet.sandwich import Effect, EffectList, Recipe
-from pokemon_gourmet.suggester.mcts.state import REWARD_GROWTH_FACTOR, Sandwich
+from pokemon_gourmet.suggester.mcts.state import REWARD_GROWTH_FACTOR, RecipeState
 
 def test_1target_reward():
     desired_effects = EffectList(
         [(Power.CATCHING, Type.DRAGON)]
     )
 
-    state = Sandwich(desired_effects)
+    state = RecipeState(desired_effects)
     for ingredient in ["Avocado", "Whipped Cream"]:
         state.add_ingredient(ingredient)
 
@@ -30,7 +30,7 @@ def test_2target_reward():
         [(Power.TITLE, Type.NORMAL), (Power.TEENSY, Type.NORMAL)]
     )
 
-    state = Sandwich(desired_effects)
+    state = RecipeState(desired_effects)
     for ingredient in ["Fried Fillet", "Sour Herba Mystica"]:
         state.add_ingredient(ingredient)
 
@@ -56,7 +56,7 @@ def test_3target_reward():
         ]
     )
 
-    state = Sandwich(desired_effects)
+    state = RecipeState(desired_effects)
     for ingredient in [*["Potato Salad"] * 3, "Tomato", "Spicy Herba Mystica"]:
         state.add_ingredient(ingredient)
 

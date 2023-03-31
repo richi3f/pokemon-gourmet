@@ -1,7 +1,6 @@
 __all__ = []
 
 import inspect
-from collections import Counter
 from functools import partial
 from math import sqrt
 from pathlib import Path
@@ -15,7 +14,7 @@ from pokemon_gourmet.sandwich.effect import EffectTuple
 from pokemon_gourmet.sandwich.recipe import MAX_CONDIMENTS, MAX_FILLINGS
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
-from pokemon_gourmet.suggester.mcts.state import Sandwich
+from pokemon_gourmet.suggester.mcts.state import RecipeState
 
 
 def parse_targets(targets_str: tuple[str, ...]) -> list[EffectTuple]:
@@ -129,7 +128,7 @@ def main(
     )
     recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
 
-    unique_recipes: set[Sandwich] = set()
+    unique_recipes: set[RecipeState] = set()
     for recipes in recipe_gen:
         if not recipes:
             continue
@@ -171,6 +170,7 @@ def main(
 
     s = "s" if len(df) != 1 else ""
     print(f"Found {len(df)} recipe{s}!\nSaved results to: {save_path}")
+
 
 if __name__ == "__main__":
     main()

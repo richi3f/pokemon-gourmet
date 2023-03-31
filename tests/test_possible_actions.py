@@ -19,7 +19,7 @@ def test_pedestrian_recipe():
         ("raid", "fighting"),
     ]
     targets = parse_targets(desired_effects)
-    initial_state = mcts.Sandwich(targets)
+    initial_state = mcts.RecipeState(targets)
 
     first_actions = initial_state.get_possible_actions()
     assert len(first_actions) == (NUM_CONDIMENTS - NUM_HERBA_MYSTICA) * NUM_FILLINGS
@@ -51,7 +51,7 @@ def test_title_power_recipe():
         ("Encounter", "grass"),
     ]
     targets = parse_targets(desired_effects)
-    initial_state = mcts.Sandwich(targets)
+    initial_state = mcts.RecipeState(targets)
     first_actions = initial_state.get_possible_actions()
 
     assert len(first_actions) == NUM_HERBA_MYSTICA * NUM_FILLINGS
@@ -83,7 +83,7 @@ def test_sparkling_power_recipe():
         ("catching", "water"),
     ]
     targets = parse_targets(desired_effects)
-    initial_state = mcts.Sandwich(targets, max_fillings=4)
+    initial_state = mcts.RecipeState(targets, max_fillings=4)
     first_actions = initial_state.get_possible_actions()
 
     assert len(first_actions) == NUM_HERBA_MYSTICA * NUM_FILLINGS
@@ -116,7 +116,7 @@ def test_min_fillings_recipe(min_fillings: int):
     desired_effects = EffectList(
         [(Power.EXP_POINT, Type.DRAGON), (Power.TITLE, Type.STEEL)]
     )
-    initial_state = mcts.Sandwich(desired_effects, min_fillings=min_fillings)
+    initial_state = mcts.RecipeState(desired_effects, min_fillings=min_fillings)
 
     first_actions = initial_state.get_possible_actions()
     assert len(first_actions) == NUM_HERBA_MYSTICA * NUM_FILLINGS

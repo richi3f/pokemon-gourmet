@@ -16,7 +16,7 @@ from pokemon_gourmet.suggester.mcts.action import (
     SelectCondiment,
     SelectFilling,
 )
-from pokemon_gourmet.suggester.mcts.state import Sandwich, State
+from pokemon_gourmet.suggester.mcts.state import RecipeState, State
 
 RolloutPolicy = Callable[..., Action]
 
@@ -65,7 +65,7 @@ ROLLOUT_POLICIES["early_stopping"] = early_stopping_rollout_policy
 
 
 def weighted_allocation_rollout_policy(
-    state: Sandwich, stop_prob: float = 0.1
+    state: RecipeState, stop_prob: float = 0.1
 ) -> Action:
     """A rollout policy that weighs ingredients according to the free space in
     the sandwich. For instance, if a sandwich has five fillings and two
