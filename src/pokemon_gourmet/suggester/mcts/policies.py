@@ -88,10 +88,12 @@ def weighted_allocation_rollout_policy(
     action_types = Counter(map(type, state.get_possible_actions()))
     if SelectBaseRecipe in action_types:
         return random.choice(possible_actions)
-    free_slots = 10 - len(state.ingredients)
+    free_slots = 10 * state.num_players - len(state)
     finish_weight = 100 * stop_prob * action_types[FinishSandwich]
     add_ingredient_weight = 100 - finish_weight
-    add_filling_weight = add_ingredient_weight * (6 - len(state.fillings)) / free_slots
+    add_filling_weight = (
+        add_ingredient_weight * (state.max_fillings - state.num_fillings) / free_slots
+    )
     add_condiment_weight = add_ingredient_weight - add_filling_weight
     weights = []
     for action in possible_actions:

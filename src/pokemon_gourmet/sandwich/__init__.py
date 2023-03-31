@@ -1,22 +1,13 @@
 __all__ = [
     "calculate_effects",
-    "Condiment",
-    "CONDIMENTS",
     "Effect",
     "EffectList",
-    "Filling",
-    "FILLINGS",
     "Ingredient",
-    "INGREDIENTS",
+    "ingredient_data",
     "Recipe",
 ]
 
 from pokemon_gourmet.sandwich.effect import Effect, EffectList
 from pokemon_gourmet.sandwich.effect_calculation import calculate_effects
-from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
-from pokemon_gourmet.sandwich.ingredient_data import (
-    CONDIMENTS,
-    FILLINGS,
-    INGREDIENTS,
-)
-from pokemon_gourmet.sandwich.recipe import Recipe
+from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
+from pokemon_gourmet.sandwich.recipe import Ingredient, Recipe

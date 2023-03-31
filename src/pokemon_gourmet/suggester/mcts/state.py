@@ -6,11 +6,18 @@ from itertools import product
 from math import log2
 from typing import Generic, Hashable, Iterator, TypeVar, Union, cast
 
+import numpy as np
+
 from pokemon_gourmet.enums import Power
 from pokemon_gourmet.sandwich.effect import EffectList
-from pokemon_gourmet.sandwich.ingredient import Ingredient
-from pokemon_gourmet.sandwich.ingredient_data import CONDIMENTS, FILLINGS
-from pokemon_gourmet.sandwich.recipe import Recipe, RecipeTuple
+from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
+from pokemon_gourmet.sandwich.recipe import (
+    MAX_CONDIMENTS,
+    MAX_FILLINGS,
+    Ingredient,
+    Recipe,
+    RecipeTuple,
+)
 from pokemon_gourmet.singleton import Singleton
 from pokemon_gourmet.suggester.mcts.action import (
     Action,
@@ -20,7 +27,7 @@ from pokemon_gourmet.suggester.mcts.action import (
     SelectFilling,
 )
 
-REWARD_GROWTH_FACTOR = log2(300) / 6
+REWARD_GROWTH_FACTOR = log2(300) / 2
 
 StateT = TypeVar("StateT", bound="State")
 State_co = TypeVar("State_co", bound="State", covariant=True)
@@ -69,28 +76,40 @@ class Sandwich(Recipe, State):
         self,
         targets: EffectList,
         min_fillings: int = 1,
-        max_fillings: int = 6,
+        max_fillings: int = MAX_FILLINGS,
+        num_players: int = 1,
     ) -> None:
-        super().__init__([], [])
-        if len(targets) != 3:
-            raise ValueError("Target effects should be exactly three.")
+        super().__init__(num_players=num_players)
+        if not 0 < len(targets) <= 3:
+            raise ValueError("Target effects should be between one and three.")
         self.targets = targets
         if max_fillings < min_fillings:
             raise ValueError(
                 "The maximum number of fillings cannot be less than the mininum"
                 "number of fillings"
             )
-        self.min_fillings = max(1, min_fillings)
-        self.max_fillings = min(6, max_fillings)
+        self.min_fillings = max(1, min_fillings) * num_players
+        self.max_fillings = min(MAX_FILLINGS, max_fillings) * num_players
+        self.max_condiments = MAX_CONDIMENTS * num_players
         self._is_finished = False
         self._reward = None
 
     def __bool__(self) -> bool:
-        return self.reward >= 1
+        return bool(self.reward >= 1)
 
     def __lt__(self, other: "Sandwich") -> bool:
-        rhs = (self.reward, -len(self.condiments), -len(self.fillings))
-        lhs = (other.reward, -len(other.condiments), -len(other.fillings))
+        rhs = (
+            self.reward,
+            -self.num_fillings,
+            -self.total_pieces,
+            -self.num_condiments,
+        )
+        lhs = (
+            other.reward,
+            -other.num_fillings,
+            -self.total_pieces,
+            -other.num_condiments,
+        )
         return rhs < lhs
 
     @property
@@ -108,7 +127,8 @@ class Sandwich(Recipe, State):
         """Whether this recipe is finished or it has no more room for any
         additional ingredient"""
         return self.is_finished or (
-            len(self.fillings) == self.max_fillings and len(self.condiments) == 4
+            self.num_fillings == self.max_fillings
+            and self.num_condiments == self.max_condiments
         )
 
     @property
@@ -133,10 +153,10 @@ class Sandwich(Recipe, State):
     def exists_with(self, ingredient: Ingredient) -> bool:
         """Check whether adding an ingredient would result in an existing
         recipe."""
-        ingredient_names = [ingredient.name]
-        ingredient_names += [ingredient.name for ingredient in self.ingredients]
-        tup = tuple(sorted(ingredient_names))
-        return tup in recipe_manager
+        i = self._get_ingredient_index(ingredient)
+        list_ = self._ingredient_list.tolist()
+        list_[i] += 1
+        return tuple(list_) in recipe_manager
 
     def get_possible_actions(self) -> list[Action]:
         """Return a list of possible actions.
@@ -156,78 +176,90 @@ class Sandwich(Recipe, State):
         number of Herba Mystica: one if Title Power desired or two if Sparkling
         Power desired.
         """
+        can_stop = False
         possible_actions = []
         if len(self) == 0:
             # Force base recipe to include Herba Mystica if Title/Sparkling Power
-            def validate_condiment(condiment: Ingredient) -> bool:
-                return not (
-                    condiment.is_herba_mystica
-                    ^ (
-                        Power.TITLE in self.targets.powers
-                        or Power.SPARKLING in self.targets.powers
-                    )
-                )
-
-            valid_condiments = filter(validate_condiment, CONDIMENTS)
-            for condiment, filling in product(valid_condiments, FILLINGS):
-                possible_actions.append(SelectBaseRecipe(condiment.name, filling.name))
+            # Sparkling is always paired with Title, so only check Title
+            title = Power.TITLE in self.targets
+            valid_condiments = np.flatnonzero(
+                ingredient_data.is_condiment
+                & ~(ingredient_data.is_herba_mystica ^ title)
+            )
+            valid_fillings = np.flatnonzero(ingredient_data.is_filling)
+            for condiment, filling in product(valid_condiments, valid_fillings):
+                possible_actions.append(SelectBaseRecipe(condiment, filling))
         else:
             # Force second condiment to be Herba Mystica if Sparkling Power
-            if Power.SPARKLING in self.targets.powers and len(self.condiments) == 1:
-                for ingredient in CONDIMENTS:
-                    if ingredient.is_herba_mystica:
-                        possible_actions.append(SelectCondiment(ingredient.name))
+            if Power.SPARKLING in self.targets and self.num_condiments == 1:
+                for ingredient in np.flatnonzero(ingredient_data.is_herba_mystica):
+                    possible_actions.append(SelectCondiment(ingredient))
             else:
                 # Add fillings if there is room
-                if len(self.fillings) < self.max_fillings:
-                    for ingredient in FILLINGS:
+                if self.num_fillings < self.max_fillings:
+                    # Skip fillings that have reached max number of pieces
+                    ingredient_counts = self._ingredient_list * ingredient_data.pieces
+                    valid_fillings = np.flatnonzero(
+                        ingredient_data.is_filling
+                        & (ingredient_counts <= self.single_ingredient_limit)
+                    )
+                    for ingredient in valid_fillings:
                         # Skip ingredients that generate redundant recipes
-                        # Skip fillings that have reached max number of pieces
-                        if (
-                            self.exists_with(ingredient)
-                            or (ingredient.pieces == 3 and self.count(ingredient) >= 4)
-                            or (ingredient.pieces == 4 and self.count(ingredient) >= 3)
-                        ):
+                        if self.exists_with(ingredient):
                             continue
-                        possible_actions.append(SelectFilling(ingredient.name))
+                        possible_actions.append(SelectFilling(ingredient))
 
-                # If cannot add more fillings, make it possible to stop
-                if len(possible_actions) == 0:
-                    possible_actions.append(FinishSandwich())
+                # If min # of fillings have been added, make it possible to stop
+                # or select condiments
+                if self.num_fillings >= self.min_fillings:
+                    can_stop = True
 
-                # Only add condiments if # min fillings have been added first
-                if len(self.fillings) >= self.min_fillings and len(self.condiments) < 4:
-                    for ingredient in CONDIMENTS:
+                    if self.num_condiments < self.max_condiments:
                         # Exclude Herba Mystica from recipe
-                        # Skip ingredients that generate redundant recipes
-                        if ingredient.is_herba_mystica or self.exists_with(ingredient):
-                            continue
-                        possible_actions.append(SelectCondiment(ingredient.name))
+                        valid_condiments = np.flatnonzero(
+                            ingredient_data.is_condiment
+                            & ~ingredient_data.is_herba_mystica
+                        )
+                        for ingredient in valid_condiments:
+                            # Skip ingredients that generate redundant recipes
+                            if self.exists_with(ingredient):
+                                continue
+                            possible_actions.append(SelectCondiment(ingredient))
+        # Add stopping action if no other action possible
+        if can_stop or len(possible_actions) == 0:
+            possible_actions.append(FinishSandwich())
         return possible_actions
 
     def get_reward(self) -> float:
         """Calculate the score of this recipe by comparing its calculated
-        effects with the desired effects.
+        effects with the desired Meal Powers.
 
         Score is zero is there is no match between recipe's computed effects
         and desired effects, and it is one if there's an exact match. If
-        there's an exact match, the score is one. It is doubled at a rate so
-        that if all target effects are at Level 3, the score becomes 300.
+        there's an exact match, the score is doubled at a rate so that if all
+        target effects are at Level 3, the score becomes 300.
 
         Returns:
             A score in the range of [0, 300]
         """
         if self.is_legal:
             effects = self.effects
-            levels = effects.remove_levels()  # Do not compare levels
-            base_reward = len(self.targets & effects) / 3
+            levels = effects.remove_levels()  # Do not compare Levels
+            intersection = cast(EffectList, self.targets & effects)
+            base_reward = len(intersection) / len(self.targets)
             if base_reward == 1.0:
+                if len(self.targets) < 3:
+                    # Only use Levels of matching Meal Powers
+                    levels = [
+                        levels[self.targets.index(i)] for i in intersection.powers
+                    ]
+                level_sum = (sum(levels) / len(levels)) - 1
                 # Grow exponentially according to Level sum
-                return 2 ** (REWARD_GROWTH_FACTOR * (sum(levels) - 3))
+                return 2 ** (REWARD_GROWTH_FACTOR * level_sum)
             return base_reward
         return 0
 
-    def move(self, action: Action) -> "State":
+    def move(self, action: Action) -> "Sandwich":
         """Copy current recipe and generate a new one by doing an action on the
         current recipe (state). Actions can either mark the recipe as finished
         or add ingredients to the list of ingredients.

@@ -8,6 +8,7 @@ from pathlib import Path
 from time import time
 from typing import Callable, Optional, cast
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from griffe.dataclasses import Docstring
@@ -16,8 +17,8 @@ from griffe.docstrings.parsers import Parser
 from pandas.io.formats.style_render import CSSStyles
 
 from pokemon_gourmet.enums import Power, Type
-from pokemon_gourmet.sandwich.effect import Effect, EffectList
-from pokemon_gourmet.sandwich.ingredient import Condiment, Filling, Ingredient
+from pokemon_gourmet.sandwich.effect import Effect, EffectList, EffectTuple
+from pokemon_gourmet.sandwich.recipe import MAX_CONDIMENTS, MAX_FILLINGS
 from pokemon_gourmet.suggester import exceptions as e
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
@@ -130,28 +131,27 @@ def get_rollout_policy_func(func_name: Optional[str]) -> p.RolloutPolicy:
     return func
 
 
-def parse_targets() -> EffectList:
+def parse_targets() -> list[EffectTuple]:
     """Return a list of targets parsed from the session state. Run tests to
     validate the targets."""
     targets = []
     for i in range(3):
         power_str = st.session_state[f"power{i}"]
-        if not power_str:
+        power = None if not power_str else Power[power_str]
+        type_str = st.session_state[f"type{i}"]
+        type_ = None if not type_str else Type[type_str]
+        if power is None and type_ is None:
+            continue
+        if power is None:
             raise e.UnexpectedPower(
                 "Unexpected Power. Make sure to fill out every Power field."
             )
-        power = Power[power_str]
-        type_str = st.session_state[f"type{i}"]
-        if not type_str:
-            type_ = None
-            if power != Power.EGG:
-                raise e.UnexpectedType(
-                    "Unexpected Type. Make sure to fill out every Type field."
-                )
-        else:
-            type_ = Type[type_str]
+        elif (power == Power.EGG) ^ (type_ is None):
+            raise e.UnexpectedType(
+                "Unexpected Type. Make sure to fill out every Type field."
+            )
         targets.append((power, type_))
-    return EffectList(targets)
+    return targets
 
 
 def get_effect_tag(effect: Effect) -> str:
@@ -174,15 +174,15 @@ def style_effects(effects: EffectList) -> str:
     return "<br>".join(get_effect_tag(effect) for effect in effects)
 
 
-def get_image_tag(ingredient: Optional[Ingredient] = None):
+def get_image_tag(ingredient: Optional[str] = None):
     """Return an ingredient represented as an HTML <img> tag."""
     if ingredient is None:
         image_tag = ""
     else:
-        slug = ingredient.name.lower().replace(" ", "_").replace("ñ", "n")
+        slug = ingredient.lower().replace(" ", "_").replace("ñ", "n")
         img_path = Path("app/static") / f"{slug}.png"
         image_tag = (
-            f"<img src='{img_path}' style='width: 3rem;' " f"title='{ingredient.name}'>"
+            f"<img src='{img_path}' style='width: 3rem;' " f"title='{ingredient}'>"
         )
     return (
         "<div style='background: rgba(38, 39, 48, 0.8); border-radius: 0.5rem'"
@@ -190,17 +190,17 @@ def get_image_tag(ingredient: Optional[Ingredient] = None):
     )
 
 
-def style_ingredients(condiments: list[Condiment], fillings: list[Filling]) -> str:
+def style_ingredients(condiments: list[str], fillings: list[str]) -> str:
     """Return an ingredient list as HTML."""
     html = (
         "<div style='display: inline-grid; gap: 0.5rem; "
-        "grid-template-columns: repeat(6, 1fr)'>"
+        f"grid-template-columns: repeat({MAX_FILLINGS}, 1fr)'>"
     )
     fillings = sorted(fillings)
-    for i in range(6):
+    for i in range(MAX_FILLINGS):
         html += get_image_tag(fillings[i] if i < len(fillings) else None)
     condiments = sorted(condiments)
-    for i in range(4):
+    for i in range(MAX_CONDIMENTS):
         html += get_image_tag(condiments[i] if i < len(condiments) else None)
     html += "</div>"
     return html
@@ -263,7 +263,7 @@ def main() -> None:
         num_results = int(
             st.number_input(
                 "Number of displayed results",
-                value=10,
+                value=25,
                 min_value=1,
                 max_value=100,
                 help="Number of results to display",
@@ -271,9 +271,9 @@ def main() -> None:
         )
         min_fillings, max_fillings = st.slider(
             "Number of fillings",
-            value=(1, 6),
+            value=(1, MAX_FILLINGS),
             min_value=1,
-            max_value=6,
+            max_value=MAX_FILLINGS,
             help=(
                 "Number of fillings in the sandwich recipe (note some recipes "
                 "might be impossible to make with a limited number of fillings)"
@@ -324,7 +324,7 @@ def main() -> None:
         try:
             targets = parse_targets()
         except (e.UnexpectedPower, e.UnexpectedType) as exception:
-            st.error(str(exception))
+            st.error(str(exception)[1:-1])
         else:
             start_time = time()
             pbar_text = "Operation in progress. Please wait."
@@ -373,8 +373,8 @@ def main() -> None:
                         recipe.condiments, recipe.fillings
                     )
                     score = recipe.reward
-                    num_condiments = len(recipe.condiments)
-                    num_fillings = len(recipe.fillings)
+                    num_condiments = recipe.num_condiments
+                    num_fillings = recipe.num_fillings
 
                     rows.append(
                         (
@@ -400,7 +400,7 @@ def main() -> None:
                 df.index += 1
                 df_html = (
                     df.style.set_table_styles(TABLE_STYLES)
-                    .format(formatter={"Score": cast(Callable, format_score)})
+                    .format(precision=3)
                     .hide(["Condiments", "Fillings"], axis="columns")
                     .to_html()
                 )

@@ -1,10 +1,12 @@
 __all__ = ["calculate_effects"]
 
-from collections import defaultdict
-from typing import TYPE_CHECKING, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING
 
-from pokemon_gourmet.enums import Flavor, Power, Type, _Attribute
-from pokemon_gourmet.sandwich.effect import EffectTuple
+import numpy as np
+from numpy.typing import NDArray
+
+from pokemon_gourmet.enums import Flavor, Power
+from pokemon_gourmet.sandwich.ingredient_data import ingredient_data
 from pokemon_gourmet.singleton import Singleton
 
 if TYPE_CHECKING:
@@ -33,10 +35,6 @@ FLAVOR_COMBO_BONUS: dict[tuple[Flavor, Flavor], Power] = {
     (Flavor.HOT, Flavor.BITTER): Power.HUMUNGO,
 }
 
-AttributeDict = Union[dict[Flavor, int], dict[Power, int], dict[Type, int]]
-AttributeName = Literal["flavor", "power", "pokemon_type", "type"]
-AttributeT = TypeVar("AttributeT", bound=_Attribute)
-
 
 class EffectCalculator(metaclass=Singleton):
     """Calculate the effects of a recipe, based on the formula derived
@@ -50,140 +48,67 @@ class EffectCalculator(metaclass=Singleton):
 
     def __init__(self) -> None:
         self.recipe = None
+        self.bonus_mat = np.zeros((len(Flavor), len(Flavor), len(Power)), dtype=int)
 
-    def __call__(self, recipe: "Recipe") -> list[EffectTuple]:
+        for (flavor1, flavor2), power in FLAVOR_COMBO_BONUS.items():
+            i = flavor1.value - 1
+            j = flavor2.value - 1
+            k = power.value - 1
+            self.bonus_mat[i, j, k] = 100
+
+    def __call__(self, recipe: "Recipe") -> NDArray[np.intp]:
         self.recipe = recipe
-        self.dominant_types: list[Type] = []
-        self.dominant_type_values: list[int] = []
         return self.compute_effects()
 
-    @staticmethod
-    def sort_key(attr_sum: tuple[AttributeT, int]) -> tuple[int, int]:
-        return (attr_sum[1], -attr_sum[0].value)
-
-    @staticmethod
-    def sort_attr_sum(attr_sum: dict[AttributeT, int]) -> dict[AttributeT, int]:
-        sorted_attr_sum = sorted(
-            attr_sum.items(), key=EffectCalculator.sort_key, reverse=True
-        )
-        return dict(sorted_attr_sum)
-
-    @overload
-    def get_attr_sum(self, attr_name: Literal["flavor"]) -> dict[Flavor, int]:
-        ...
-
-    @overload
-    def get_attr_sum(self, attr_name: Literal["power"]) -> dict[Power, int]:
-        ...
-
-    @overload
-    def get_attr_sum(
-        self, attr_name: Literal["pokemon_type", "type"]
-    ) -> dict[Type, int]:
-        ...
-
-    def get_attr_sum(self, attr_name: AttributeName) -> AttributeDict:
-        """Sum the contribution of each ingredient to a recipe's overall
-        Flavor, Power, or Pokémon Type.
-
-        Args:
-            attr_name: Name of attribute: `flavor`, `power`, or `pokemon_type`
-
-        Returns:
-            A dictionary mapping each attribute to its sum
-        """
-        if self.recipe is None:
-            raise ValueError("No recipe")
-
-        if attr_name == "type":
-            attr_name = "pokemon_type"
-        elif attr_name not in ("flavor", "power", "pokemon_type"):
-            raise ValueError(f"Unrecognized attribute: {attr_name}.")
-
-        raw_attr_sum = defaultdict(int)
-        for ingredient in self.recipe.ingredients:
-            for attr, value in getattr(ingredient, attr_name).items():
-                pieces = getattr(ingredient, "pieces", 1)
-                raw_attr_sum[attr] += value * pieces
-        attr_sum = self.sort_attr_sum(raw_attr_sum)
-        attr_sum = {attr: value for attr, value in attr_sum.items() if value != 0}
-
-        if attr_name == "flavor":
-            # Force min two flavors in result
-            if len(attr_sum) == 1:
-                for flavor in Flavor._member_map_.values():
-                    if flavor not in attr_sum:
-                        attr_sum[flavor] = 0
-                        break
-
-        if attr_name == "pokemon_type":
-            # Force min three types in result
-            while len(attr_sum) < 3:
-                for type_ in Type._member_map_.values():
-                    if type_ not in attr_sum:
-                        attr_sum[type_] = 0
-                        break
-
-        return attr_sum
-
-    def compute_effects(self) -> list[EffectTuple]:
+    def compute_effects(self) -> NDArray[np.intp]:
         """Compute the effects of a recipe.
 
         Returns:
             List of tuples containing a Power, a Pokémon Type, and a Level.
         """
-        flavor_sum = self.get_attr_sum("flavor")
-        power_sum = self.get_attr_sum("power")
-        type_sum = self.get_attr_sum("pokemon_type")
+        if self.recipe is None:
+            raise ValueError()
+        ingredient_counts = self.recipe._ingredient_list * ingredient_data.pieces
 
-        # Apply Flavor combo bonus to Power sum
-        dominant_flavor1, dominant_flavor2, *_ = flavor_sum.keys()
-        boosted_power = FLAVOR_COMBO_BONUS[(dominant_flavor1, dominant_flavor2)]
-        if boosted_power in power_sum:
-            power_sum[boosted_power] += 100
-        else:
-            power_sum[boosted_power] = 100
-        power_sum = self.sort_attr_sum(power_sum)
+        flavor_sum = ingredient_counts @ ingredient_data.flavor_mat
+        i, j = np.argsort(-1 * flavor_sum, kind="stable").tolist()[:2]
 
-        # Use dominant Type list to compute final Type order and effect Levels
-        dominant_types = [*type_sum.items()][:3]
-        for type_, value in dominant_types:
-            self.dominant_types.append(type_)
-            self.dominant_type_values.append(value)
+        power_sum = ingredient_counts @ ingredient_data.power_mat
+        power_sum += self.bonus_mat[i, j, :]
 
-        sorted_types = self.sort_types()
-        levels = self.compute_levels()
+        # Force Sparkling Power to zero if there are less than two Herba Mystica
+        not_sparkling = np.arange(len(Power)) != (Power.SPARKLING.value - 1)
+        power_sum *= not_sparkling | (power_sum >= 2000)
 
-        filtered_powers = [
-            power
-            for power, value in power_sum.items()
-            if (power != Power.SPARKLING) or (value >= 2000)
-        ][:3]
+        power_ids = np.argsort(-1 * power_sum, kind="stable")[:3]
 
-        return [*zip(filtered_powers, sorted_types, levels)]
+        type_sum = ingredient_counts @ ingredient_data.type_mat
+        types_ids = np.argsort(-1 * type_sum, kind="stable")[:3]
+        type_values = type_sum[types_ids]
 
-    def sort_types(self) -> tuple[Type, Type, Type]:
-        """Sort the Type of the recipe's effects.
+        sorted_types = np.take(types_ids, self.sort_types(type_values))
+        levels = self.compute_levels(type_values)
+
+        return np.column_stack([power_ids, sorted_types, levels])
+
+    @staticmethod
+    def sort_types(values: NDArray) -> tuple[int, int, int]:
+        """Return the indices that would sort the Type array.
 
         Returns:
-            Final three Types associated with each recipe effect
+            Tuple of indices that sort the Type array.
         """
-        if not self.dominant_types:
-            raise ValueError("Dominant Types have not been computed")
-
-        assert len(self.dominant_types) == 3
-        types = self.dominant_types
-        values = self.dominant_type_values
+        assert len(values) == 3
         difference = values[0] - values[1]
 
         if values[0] > 480:
-            return (types[0], types[0], types[0])
+            return (0, 0, 0)
         elif values[0] > 280:
-            return (types[0], types[0], types[2])
+            return (0, 0, 2)
         else:
             split = False
             if values[0] > 105 and difference > 105:
-                return (types[0], types[0], types[2])
+                return (0, 0, 2)
             elif 100 <= values[0] <= 105:
                 split = difference >= 80 and values[1] <= 21
             elif 90 <= values[0] < 100:
@@ -193,33 +118,30 @@ class EffectCalculator(metaclass=Singleton):
             elif 74 <= values[0] < 80:
                 split = difference >= 72 and values[1] <= 5
             if split:
-                return (types[0], types[2], types[0])
-            return (types[0], types[2], types[1])
+                return (0, 2, 0)
+            return (0, 2, 1)
 
-    def compute_levels(self) -> tuple[int, int, int]:
+    @staticmethod
+    def compute_levels(values: NDArray) -> tuple[int, int, int]:
         """Calculate the Levels of each effect.
 
         Returns:
             Three Levels associated with each recipe effect
         """
-        if not self.dominant_type_values:
-            raise ValueError("Dominant Types have not been computed")
-
-        first_value, second_value, third_value = self.dominant_type_values
-        if first_value < 180:
+        if values[0] < 180:
             return (1, 1, 1)
-        elif first_value <= 280:
-            if second_value >= 180 and third_value >= 180:
+        elif values[0] <= 280:
+            if values[1] >= 180 and values[2] >= 180:
                 return (2, 2, 1)
             else:
                 return (2, 1, 1)
-        elif first_value < 380:
-            if third_value >= 180:
+        elif values[0] < 380:
+            if values[2] >= 180:
                 return (2, 2, 2)
             else:
                 return (2, 2, 1)
-        elif first_value < 460:
-            if second_value >= 380 and third_value >= 380:
+        elif values[0] < 460:
+            if values[1] >= 380 and values[2] >= 380:
                 return (3, 3, 3)
             else:
                 return (3, 3, 2)

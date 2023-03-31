@@ -4,17 +4,21 @@ import inspect
 from collections import Counter
 from functools import partial
 from math import sqrt
+from pathlib import Path
 
 import click
+import numpy as np
+import pandas as pd
 
 from pokemon_gourmet.enums import Power, Type
-from pokemon_gourmet.sandwich.effect import EffectList
-from pokemon_gourmet.sandwich.ingredient import Ingredient
+from pokemon_gourmet.sandwich.effect import EffectTuple
+from pokemon_gourmet.sandwich.recipe import MAX_CONDIMENTS, MAX_FILLINGS
 from pokemon_gourmet.suggester.generator import RecipeGenerator
 from pokemon_gourmet.suggester.mcts import policies as p
+from pokemon_gourmet.suggester.mcts.state import Sandwich
 
 
-def parse_targets(targets_str: tuple[str, ...]) -> EffectList:
+def parse_targets(targets_str: tuple[str, ...]) -> list[EffectTuple]:
     """Parse and validate a string of target effects.
 
     Args:
@@ -27,10 +31,12 @@ def parse_targets(targets_str: tuple[str, ...]) -> EffectList:
         ValueError: If the target effect is incorrectly formatted
 
     Returns:
-        List of target effects (power-type combo)
+        List of target effects (Power-Type combo)
     """
     targets = []
-    for target_str in targets_str:
+    for i, target_str in enumerate(targets_str):
+        if i >= 3:
+            raise ValueError("Maximum three target effects permitted.")
         if "egg" in target_str.lower():
             power = Power.EGG
             pokemon_type = None
@@ -45,7 +51,7 @@ def parse_targets(targets_str: tuple[str, ...]) -> EffectList:
             power = Power[power_str.upper()]
             pokemon_type = Type[type_str.upper()]
         targets.append((power, pokemon_type))
-    return EffectList(targets)
+    return targets
 
 
 def parse_rollout_policy(func_name: str, ctxt_args: list[str]) -> p.RolloutPolicy:
@@ -71,19 +77,10 @@ def parse_rollout_policy(func_name: str, ctxt_args: list[str]) -> p.RolloutPolic
     return func
 
 
-def format_ingredients(ingredients: list[Ingredient]) -> str:
-    """Format list of ingredients."""
-    counts = Counter(ingredients)
-    return "\n- " + "\n- ".join(
-        f"{ingredient.name}" + (f" (x{count})" if count > 1 else "")
-        for ingredient, count in counts.most_common()
-    )
-
-
 @click.command(
     context_settings=dict(ignore_unknown_options=True, allow_extra_args=True)
 )
-@click.argument("targets_str", nargs=3, type=str)
+@click.argument("targets_str", nargs=-1, type=str)
 @click.option(
     "-n",
     "--num-iter",
@@ -121,8 +118,6 @@ def main(
     exploration_constant: float,
     max_walltime: int,
 ):
-    if len(targets_str) != 3:
-        raise ValueError("Three desired effects must be specified.")
     targets = parse_targets(targets_str)
     rollout_policy_func = parse_rollout_policy(rollout_policy, ctxt.args)
 
@@ -134,21 +129,48 @@ def main(
     )
     recipe_gen = RecipeGenerator(targets, num_iter, **mcts_kwargs)
 
-    unique_recipes = set()
+    unique_recipes: set[Sandwich] = set()
     for recipes in recipe_gen:
         if not recipes:
             continue
         unique_recipes.update(recipes)
 
-    for recipe in sorted(unique_recipes, reverse=True):
-        filling_names = format_ingredients(getattr(recipe, "fillings"))
-        condiment_names = format_ingredients(getattr(recipe, "condiments"))
-
-        print(
-            f"{recipe}\nMatch: {min(1.0, recipe.reward):.3f}\n"
-            f"Fillings:{filling_names}\nCondiments:{condiment_names}"
+    rows = []
+    for recipe in unique_recipes:
+        condiments = recipe.condiments
+        fillings = recipe.fillings
+        effects = recipe.effects.tuples
+        rows.append(
+            (
+                *effects,
+                *fillings,
+                *[""] * (recipe.max_fillings - len(fillings)),
+                *condiments,
+                *[""] * (recipe.max_condiments - len(condiments)),
+                recipe.reward,
+                -len(fillings),
+                -len(condiments),
+                -recipe.total_pieces,
+            )
         )
 
+    save_path = Path.cwd() / "recipes.csv"
+    sorting_columns = ["score", "num_fillings", "total_pieces", "num_condiments"]
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            *[f"effect{i + 1}" for i in range(3)],
+            *[f"filling{i + 1}" for i in range(MAX_FILLINGS)],
+            *[f"condiment{i + 1}" for i in range(MAX_CONDIMENTS)],
+            *sorting_columns,
+        ],
+    ).sort_values(sorting_columns, ascending=False)
+    df["score"] = np.round(df["score"], 3)
+    df.drop(sorting_columns[1:], axis=1, inplace=True)
+    df.to_csv(save_path, index=False)
+
+    s = "s" if len(df) != 1 else ""
+    print(f"Found {len(df)} recipe{s}!\nSaved results to: {save_path}")
 
 if __name__ == "__main__":
     main()
